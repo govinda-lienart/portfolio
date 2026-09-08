@@ -40,12 +40,14 @@
 /* ---- page title (Starlight's h1#_top, sits above .sl-markdown-content) ---- */
 .content-panel h1#_top {
   font-family: 'Merriweather Sans', -apple-system, 'Segoe UI', sans-serif;
-  font-weight: 800;
+  font-weight: 800 !important;
+  font-style: normal !important;
   font-size: 2.1rem;
   line-height: 1.15;
-  letter-spacing: -0.005em;
-  color: var(--sl-color-text);
+  letter-spacing: -0.01em;
+  color: var(--sl-color-accent) !important;
 }
+:root[data-theme='dark'] .content-panel h1#_top { color: var(--sl-color-accent-low) !important; }
 
 .sl-markdown-content {
   font-size: 0.95rem;
