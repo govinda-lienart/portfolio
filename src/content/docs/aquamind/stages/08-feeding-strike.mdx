@@ -1,0 +1,109 @@
+---
+title: "Stage 8 · Feeding-strike detection"
+description: "Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN–LSTM on image crops."
+---
+
+import Abstract from '../../../../components/Abstract.astro';
+
+<Abstract meta="Video: IMG_2349.MOV (4–5 fish, food-injection segment) · 119 labelled strikes · updated 2026-09">
+A feeding strike is a fast, subtle appearance-and-posture event with no visible
+prey to anchor on — a harder computer-vision target than the spatially "loud"
+behaviours of earlier stages. This stage tests whether a strike can be detected
+automatically from video, and how far a geometry-only approach gets before
+appearance information is needed. A geometry-only baseline lands near chance
+(~61 % accuracy), which is the evidence that appearance features are actually
+required; a CNN–LSTM on image crops (DINOv2 `vits14` features → LSTM, with early
+stopping) reaches **70 % accuracy, 0.71 precision, 0.71 recall**.
+</Abstract>
+
+## Introduction
+
+A feeding strike is the fast lunge and capture a fish makes when it takes prey.
+Behavioural ecology treats it as one of the single most informative behavioural
+cues, especially in larval fish, because a trained observer can read from it the
+factors acting on the animal. It is also very subtle and hard to score by eye, and
+automated detection is not established for fish at any real scale in ecology. A
+detector that worked would be valuable, and in the long run could support routine
+scoring in the lab.
+
+For computer vision, a feeding strike is a harder target than the behaviours in
+the previous stage. Chasing, depth preference and other spatially "loud"
+behaviours have a clear geometric signature: they are defined by where a fish is
+and how it moves relative to the tank or to another fish. A feeding strike is not.
+Its signal lives in appearance and posture — a brief body vibration or S-bend and
+a mouth gape — rather than in position. The prey is a tiny particle, invisible at
+screen resolution, so there is no visible target to anchor on. The whole event is
+short and easy to miss when the fish is not in sharp focus.
+
+## Aim
+
+This stage tests whether a feeding strike can be detected automatically from
+video, and how far a geometry-only approach gets before appearance information is
+needed. The one component that might still carry a geometric signal is the burst —
+a strike burst may be faster or sharper than one in normal swimming — but I expect
+it will not be enough on its own, and that reliable detection needs a model
+working from the image directly: a CNN extracting appearance and posture per
+frame, a sequence model learning how they change across the strike. The stage is
+built in that order: a geometry-only baseline first, then a CNN–LSTM pipeline on
+image crops.
+
+## Methods
+
+### Data
+
+The video `IMG_2349.MOV` is the documented feeding-experiment recording (2 min
+baseline / 2 min sand-injection / 2 min food injection) and is already tracked
+from earlier stages, so `tracks.parquet` and per-fish crops are reused directly.
+**119 real strikes** were labelled across the food-injection segment.
+
+Positive and negative windows are designed to control for the injection
+disturbance itself: negatives are drawn from the **water-injection** sub-section,
+not from calm baseline, so the model has to learn "fish struck at food" rather
+than "something got injected". The chaotic feeding-frenzy cluster right at the
+injection point is **excluded** — too much occlusion and ID-switch risk for
+reliable per-fish attribution.
+
+Two window designs were built and compared: a fixed 45-frame window and a
+whole-event window (real event span, with length-matched negatives).
+
+### Model
+
+- **Geometry baseline** — kinematic features (speed, acceleration, burst) into
+  logistic regression / random forest / XGBoost.
+- **CNN–LSTM** — per-frame crops → a frozen DINOv2 backbone (`vits14`) → a
+  sequence of embedding vectors → an LSTM → a binary strike / no-strike head.
+  Backbones `vitb14` and ResNet18 were also tried and were worse or mixed.
+
+### Evaluation
+
+Accuracy, precision and recall on a held-out test split. Loss curves are inspected
+directly — the 200-epoch run showed train loss going to zero while test loss
+bottomed at epoch 22 and then climbed, i.e. real overfitting. **Early stopping**
+(keep the minimum-test-loss checkpoint, not the final epoch) was added, and the
+epoch-22 checkpoint is the reported model.
+
+## Results
+
+| Model | Accuracy | Precision | Recall |
+|---|---|---|---|
+| Geometry-only baseline | ~0.61 | — | — |
+| CNN–LSTM, fixed 45-frame window | ~0.64 | — | — |
+| **CNN–LSTM, whole-event (epoch-22 checkpoint)** | **0.70** | **0.71** | **0.71** |
+
+The geometry baseline landing near chance is the useful result: it is clean
+evidence that appearance features were genuinely needed here, not an assumption.
+The whole-event window beat the fixed window and is the kept pipeline; the
+fixed-window and backbone-ablation scripts remain in the repo as documented
+comparison points.
+
+## Discussion
+
+The headline number is the **early-stopped** figure, not the higher uncorrected
+200-epoch number — a distinction only caught by looking at the actual loss curve
+before trusting the result. That check is the point of the stage as much as the
+detector is. The next step (Phase F — overlay, per-fish counters, an automated
+report) is deferred.
+
+## References
+
+Cited literature and tools — to be added.

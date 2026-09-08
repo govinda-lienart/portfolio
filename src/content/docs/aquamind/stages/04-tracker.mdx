@@ -1,0 +1,124 @@
+---
+title: "Stage 4 · Custom tracker"
+description: "A custom SORT-style tracker — and the experiment log of the earlier Kalman iteration that led to it."
+---
+
+The tracker takes YOLO detections and assigns a permanent ID (Fish 1–5) to each
+fish, holding it across the whole video through occlusion, plant cover, wall
+approaches and crossings. The detector works well; the hard problem is **identity
+persistence** — when two fish pass through the same region, which one is which
+when they come out the other side?
+
+## Current design
+
+The tracker is **SORT-family, not Kalman**. Its core:
+
+- a **constant-velocity motion model** — the *predicted* position (not the
+  last-known position) anchors matching
+- an **OC-SORT direction-consistency term** in the cost matrix
+- **Hungarian matching** with ghost / recovery handling for occluded fish
+- **merge-aware geometry** (`merge_fix`) for the detector-merge case where two
+  fish become one YOLO box — a merge-aware coast plus a velocity freeze
+- an **optional appearance-embedding fusion** into the cost matrix (see
+  [Stage 6](/portfolio/aquamind/stages/06-reid/))
+- a **two-phase tentative / confirmed lifecycle** during a calibration window,
+  before the fish pool locks
+
+All parameters live in `config.yaml`.
+
+:::note[Draft]
+A full walk-through of the current tracker is still being written. The section
+below is the migrated experiment log from the earlier Kalman-filter iteration
+(`fish_tracker.py`, since deleted) — it documents how the design arrived here.
+:::
+
+## Experiment log — the earlier Kalman iteration
+
+### Starting point: a script we couldn't explain
+
+The original `track_zebrafish.py` was 433 lines, fully AI-generated, and had
+accumulated an IoU cost matrix, a relaxed-threshold recovery pass, bounding-box
+size clipping, a `min_displacement` gate, ghost detection with empty-box IoU
+checks, and eye-keypoint tracking via a YOLOv8-pose model. None of it was fully
+understood; parameters had been tuned by trial and error.
+
+**Decision:** rewrite from scratch, keeping only what could be explained line by
+line — a Kalman filter, Hungarian matching, and a tentative / confirmed two-phase
+lifecycle. Everything else was removed.
+
+### The calibration window
+
+Reflections off the water surface and glass are confidently detected as fish by
+YOLO, and last 1–3 seconds. A **10-second calibration window** tracks every
+detection as tentative (yellow boxes, no ID). A tentative track is only promoted
+once it has accumulated `confirm_hits = 200` frames (~3.3 s at 60 fps) — longer
+than any reflection lasts. Once five fish are confirmed, the pool locks and no new
+IDs can be created. This stayed stable through every later experiment.
+
+### Experiment 1 — YOLOv8-pose for eye keypoints
+
+Use eye position instead of bbox centre as the anchor. The pose model trained to
+only `mAP50(P) = 0.26`; the keypoint was unreliable on blurry frames (common at
+60 fps during fast movement) and disappeared entirely when a fish faced the
+camera. **Dropped** — bbox centre is less precise but consistent.
+
+### Experiment 2 — trajectory visualisation (polyfit arrows)
+
+For each confirmed track, the last 20 centres are kept and `numpy.polyfit` fits a
+line projected ~1 s forward, drawn as an arrow. Purely diagnostic — a wildly
+swinging arrow immediately revealed a corrupted history. Kept throughout as a
+debugging aid.
+
+### Experiment 3 — NMS IoU threshold
+
+YOLO's default `iou=0.7` left duplicate boxes on one fish; `iou=0.4` suppressed
+valid detections when two fish swam close. **Settled on `iou=0.5`.**
+
+### Experiment 4 — MATCH_AHEAD: projecting anchors forward
+
+Inspired by OC-SORT: match against a position projected 5 frames ahead, so two
+fish moving apart have less ambiguous costs. It helped marginally on approach but
+**overshoots on separation** — the projected anchor can land closer to the wrong
+fish, causing the exact swap it was meant to prevent. `MATCH_AHEAD = 15` was much
+worse. Reverted, then removed. *The lookahead that separates approaching fish is
+the same amount that overshoots separating fish.*
+
+### Experiment 5 — direction penalty
+
+Multiply a detection's cost by 3× if it lies "behind" the track's heading.
+**Immediate regression** — noisy Kalman velocity near walls and early frames made
+the correct (just-behind) detection 3× more expensive than a wrong one in the
+"right" direction, triggering a runaway feedback loop. Removed immediately; a
+gentler 1.2–1.5× factor was never tested.
+
+### Experiment 6 — crossing swap check (velocity snapshot)
+
+Inspired by Multiple Hypothesis Tracking: don't decide during ambiguity. When two
+tracks come within `CROSS_DISTANCE = 80` px, snapshot both Kalman velocities; when
+they separate, compare each track's new velocity to its snapshot by dot product.
+If **both** dot products are negative (both fish reversed relative to their
+pre-crossing heading), the IDs are swapped — so swap them back.
+
+**Worked** for head-on crossings. **Failed** for parallel same-direction
+crossings: when two fish meet at a wall and both swim up along it, both dot
+products stay positive and the check concludes "no swap" even when the IDs have
+mixed.
+
+### The root cause
+
+Every approach above is a **tracker-side patch for a detector-side problem**.
+When two fish overlap enough, YOLO's NMS merges them into one detection; the
+Hungarian algorithm updates one track's Kalman state with the merged centroid
+(corrupting its velocity) and marks the other missing. When the fish separate, the
+tracker is working from corrupted state. No cost-matrix tuning fully compensates,
+and the golden-morph fish are too visually alike for colour-histogram re-ID.
+
+### Conclusion: the fix is in the labels
+
+The principled fix for parallel crossings is to make the detector output **two
+separate boxes** during the overlap — retrain on targeted data (fish side by side
+at the wall, partial overlaps at various angles, plus the existing training set).
+With two boxes during a crossing, the matching stays clean and the velocity swap
+check handles the rest. *The tracker logic is solid; it needs the detector to do
+its part.* This insight — plus the merge-aware geometry that replaced the Kalman
+model — is what Stage 4's current SORT-style tracker is built on.

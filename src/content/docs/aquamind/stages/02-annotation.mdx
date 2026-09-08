@@ -1,0 +1,168 @@
+---
+title: "Stage 2 · Label and store annotations in MySQL"
+description: "Hand-labelling every visible fish with bounding boxes, exporting YOLO format, and storing each box as a relational record."
+---
+
+import FigureSrc from '../../../../components/FigureSrc.astro';
+
+Stage 2 implements the annotation layer of the AquaMind pipeline, where each
+extracted frame from Stage 1 is manually labelled by drawing bounding boxes around
+every visible fish. This turns the raw frame dataset into a supervised-learning
+dataset by adding object-level labels to each image.
+
+To store these labels in a structured way, an `annotations` table is created in
+MySQL. Each annotation represents a single bounding box for one fish and is linked
+back to its frame via a foreign key (`frame_id`). The labels are also exported in
+YOLO format for model training.
+
+```text
+Video → Frames → Annotations → Database → AI model
+```
+
+## System prerequisites
+
+### Environment setup
+
+The same `aquamind` Conda environment from Stage 1 is used. No additional Python
+packages are required — `mysql-connector-python`, `os` and `datetime` are already
+installed.
+
+### Labelling tool
+
+Label Studio is used for manual annotation and is launched as a Docker container.
+No local installation is required beyond Docker Desktop being active.
+
+## Environment and infrastructure setup
+
+Label Studio is launched as a single Docker container using the
+`heartexlabs/label-studio:latest` image. Port 8080 is mapped to the host, and a
+volume mount gives Label Studio persistent storage — all annotation data is
+written to the local `mydata` folder on the host rather than inside the container,
+so the work survives a container restart.
+
+```bash
+docker run -it -p 8080:8080 -v $(pwd)/mydata:/label-studio/data heartexlabs/label-studio:latest
+```
+
+## Annotation
+
+Inside Label Studio, a new project named *AquaMind* is created. The labelling
+interface is configured under Settings → Labelling Interface: the Computer Vision
+category, the *Object Detection with Bounding Boxes* template, and a single label
+class `danio_rerio_golden`. All extracted PNG frames from Stage 1 are imported as
+individual tasks.
+
+Each frame is opened individually and a bounding box is drawn around every visible
+fish — one box per fish.
+
+## YOLO export
+
+Once all frames are annotated, the project is exported in *YOLO with Images*
+format. The archive contains:
+
+```text
+classes.txt       # label names (label = "danio_rerio_golden")
+images/           # frame images
+labels/           # one .txt file per image with bounding-box coordinates
+notes.json        # metadata
+```
+
+Each `.txt` file corresponds to one frame and contains one line per bounding box:
+
+```text
+class_id  x_center  y_center  width  height
+```
+
+All five values are normalised between 0 and 1 relative to the image dimensions,
+making the format resolution-independent. For example:
+
+```text
+0  0.242  0.668  0.103  0.113
+```
+
+This line represents one fish: class 0 (`danio_rerio_golden`).
+
+<FigureSrc src="/aquamind/yolo-bbox-explainer.svg" alt="YOLO bounding-box coordinate diagram" caption="YOLO coordinate system — all values normalised between 0 and 1." />
+
+## Database schema
+
+Before storing annotations, the `annotations` table is created with a foreign key
+linking each record back to its frame in the `frames` table.
+
+```sql
+CREATE TABLE annotations (
+  id         INT AUTO_INCREMENT PRIMARY KEY,  -- unique row identifier
+  frame_id   INT,                             -- foreign key to frames table
+  FOREIGN KEY (frame_id) REFERENCES frames(id),
+  class_id   INT,                             -- YOLO class index
+  label      VARCHAR(255),                    -- human-readable label name
+  x_center   FLOAT,                           -- normalised x center
+  y_center   FLOAT,                           -- normalised y center
+  width      FLOAT,                           -- normalised box width
+  height     FLOAT,                           -- normalised box height
+  created_at TIMESTAMP                        -- system time of insertion
+);
+```
+
+## Annotation-storage pipeline
+
+[View source on GitHub](https://github.com/govinda-lienart/AquaMind/blob/main/store_annotations.py)
+
+### Design overview
+
+The script iterates over every `.txt` file in the exported `labels/` folder. For
+each file the frame number is parsed from the filename, used to retrieve the
+`frame_id` from the `frames` table, and each bounding box is inserted as a record
+into `annotations`.
+
+### Filename parsing and frame-ID lookup
+
+Label Studio exports annotation files with a hash prefix followed by the frame
+name (e.g. `e6d83681-frame_360.txt`). The frame number is parsed from the filename
+and used to query the `frames` table:
+
+```sql
+SELECT id FROM frames WHERE frame_number = %s
+```
+
+`cursor.fetchone()[0]` returns the `frame_id`, used as the foreign key when
+inserting into `annotations`. This lookup ensures every annotation is linked to the
+correct source frame regardless of file ordering.
+
+### Reading and casting bounding-box values
+
+Each line represents one bounding box. The five whitespace-separated values are
+read and cast — `class_id` to `int`, the four coordinates to `float` — so they are
+stored with the correct types in MySQL.
+
+### Inserting into MySQL
+
+```sql
+INSERT INTO annotations (frame_id, class_id, label, x_center, y_center, width, height, created_at)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+```
+
+The `label` field is set to `danio_rerio_golden` and `created_at` is generated at
+insertion time with `datetime.datetime.now()`. Once all files are processed,
+`conn.commit()` saves the rows and `conn.close()` frees the connection.
+
+## Validation
+
+Correctness is verified by querying the `annotations` table directly:
+
+```sql
+SELECT * FROM annotations;
+```
+
+Expected properties: one record per bounding box, `frame_id` values matching the
+`frames` table, normalised coordinates between 0 and 1, and consistent `label` /
+`class_id` values across all records.
+
+## Outcome
+
+Stage 2 establishes a reproducible annotation pipeline that links every extracted
+frame to a structured set of bounding-box records in MySQL: Label Studio as a
+lightweight annotation environment, **366 labelled fish instances across 61
+frames** in YOLO format, each box parsed and stored as a relational record linked
+to its source frame, all inside the Dockerised MySQL environment. This forms the
+labelled dataset layer for downstream model training.
