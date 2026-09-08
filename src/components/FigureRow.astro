@@ -1,0 +1,68 @@
+---
+import { Image } from 'astro:assets';
+
+interface Panel {
+  src: ImageMetadata;
+  alt: string;
+  label?: string;
+}
+interface Props {
+  panels: Panel[];
+  caption?: string;
+}
+const { panels, caption } = Astro.props;
+---
+
+<figure class="am-figrow">
+  <div class="am-figrow__grid" style={`--n:${panels.length}`}>
+    {panels.map((p) => (
+      <div class="am-figrow__panel">
+        <Image src={p.src} alt={p.alt} width={700} />
+        {p.label && <span class="am-figrow__tag">{p.label}</span>}
+      </div>
+    ))}
+  </div>
+  {caption && (
+    <figcaption>
+      <span class="am-figure__label">Fig</span>
+      {caption}
+    </figcaption>
+  )}
+</figure>
+
+<style>
+  .am-figrow { margin: 2em 0; counter-increment: am-figure; }
+  .am-figrow__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 2), 1fr);
+    gap: 0.6rem;
+  }
+  .am-figrow__panel { position: relative; }
+  .am-figrow__panel img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--sl-color-hairline);
+  }
+  .am-figrow__tag {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    background: rgba(0, 0, 0, 0.72);
+    color: #fff;
+    padding: 0.15rem 0.4rem;
+  }
+  .am-figrow figcaption {
+    margin-top: 0.7rem;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .am-figure__label { font-family: 'Merriweather Sans', sans-serif; font-weight: 800; }
+  .am-figure__label::after { content: ' ' counter(am-figure) '. '; }
+  @media (max-width: 640px) {
+    .am-figrow__grid { grid-template-columns: 1fr; }
+  }
+</style>

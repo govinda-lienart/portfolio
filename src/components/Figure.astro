@@ -1,0 +1,49 @@
+---
+import { Image } from 'astro:assets';
+
+interface Props {
+  src: ImageMetadata;
+  alt: string;
+  caption?: string;
+  /** cap display width in px */
+  width?: number;
+}
+const { src, alt, caption, width = 900 } = Astro.props;
+---
+
+<figure class="am-figure">
+  <Image src={src} alt={alt} width={width} />
+  {caption && (
+    <figcaption>
+      <span class="am-figure__label">Fig</span>
+      {caption}
+    </figcaption>
+  )}
+</figure>
+
+<style>
+  .am-figure {
+    margin: 2em 0;
+    counter-increment: am-figure;
+  }
+  .am-figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--sl-color-hairline);
+  }
+  .am-figure figcaption {
+    margin-top: 0.7rem;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--sl-color-text);
+  }
+  .am-figure__label {
+    font-family: 'Merriweather Sans', sans-serif;
+    font-weight: 800;
+  }
+  .am-figure__label::after {
+    content: ' ' counter(am-figure) '. ';
+    font-weight: 800;
+  }
+</style>

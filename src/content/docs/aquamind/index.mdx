@@ -1,0 +1,44 @@
+---
+title: AquaMind
+description: Automated computer-vision analysis of zebrafish behaviour — an end-to-end PyTorch + OpenCV pipeline.
+tableOfContents: false
+---
+
+import { Image } from 'astro:assets';
+import Abstract from '../../../components/Abstract.astro';
+import cover from '../../../assets/aquamind/cover.jpeg';
+
+<Image src={cover} alt="Two Danio rerio near an Anubias leaf in the observation tank, light refracting into a spectrum on the back glass" width={900} />
+
+<Abstract meta="Govinda Lienart · AquaMind · updated 2026">
+AquaMind is an open-source computer-vision tool that automatically tracks and
+analyses the behaviour of zebrafish (*Danio rerio*) in an observation tank. It
+replaces the manual behavioural scoring done by hand during a behavioural-ecology
+PhD with an automated PyTorch and OpenCV pipeline. The system detects and tracks
+individual fish across video frames, holds identity through occlusion behind
+plants and pipes, and uses that tracking to measure activity, bottom-dwelling,
+chasing and feeding strikes for a chemical-alarm-cue antipredator assay.
+</Abstract>
+
+## What it does
+
+The pipeline detects and tracks individual fish across video frames, holding
+identity even when a fish is partly hidden behind the plant or a pipe, and then
+uses that tracking to measure real behaviour: activity, bottom-dwelling, chasing
+and feeding strikes.
+
+## How it is built
+
+| Layer | Tools |
+|---|---|
+| Detection | YOLOv8, fine-tuned on hand-labelled frames |
+| Tracking | a custom SORT-style tracker — constant-velocity motion model, OC-SORT direction consistency, merge-aware geometry, optional learned appearance embedding |
+| Behaviour | kinematic features and CNN + LSTM classifiers, per behaviour |
+| Data | MySQL for frames, annotations and tracks |
+| ML operations | MLflow for experiment tracking and a model registry, DVC for dataset versioning |
+
+## Where to start
+
+- [Introduction](/portfolio/aquamind/introduction/) — background and goal
+- [Pipeline overview](/portfolio/aquamind/pipeline/) — how the stages fit together
+- [Stage 1 · Frame extraction](/portfolio/aquamind/stages/01-frame-extraction/) — the build, stage by stage

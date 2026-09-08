@@ -1,0 +1,88 @@
+/* ============================================================
+   AquaMind article section — PLOS / MkDocs-Material reading room
+   Layered on top of Starlight's defaults.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Merriweather+Sans:wght@400;700;800&family=Roboto+Mono:wght@400;500&display=swap');
+
+:root {
+  --sl-font: 'Merriweather', Georgia, serif;
+  --sl-font-mono: 'Roboto Mono', ui-monospace, monospace;
+
+  /* journal blue accent */
+  --sl-color-accent-low: #d7e6f2;
+  --sl-color-accent: #2a6496;
+  --sl-color-accent-high: #1a4a73;
+
+  --sl-content-width: 50rem;
+}
+
+/* Light theme: near-black text on white, like a printed article */
+:root[data-theme='light'] {
+  --sl-color-text: #1a1a1a;
+  --sl-color-text-accent: #2a6496;
+  --sl-color-bg: #ffffff;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-hairline: #e3e3e3;
+  --sl-color-gray-7: #f7f8fa;
+}
+
+/* ---- headings: Merriweather Sans, dark, no colour ---- */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4,
+.site-title {
+  font-family: 'Merriweather Sans', -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 800;
+}
+
+.sl-markdown-content {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  counter-reset: section am-figure;
+}
+.sl-markdown-content p,
+.sl-markdown-content li { text-align: left; }
+
+.sl-markdown-content h2 {
+  font-size: 1.35rem;
+  margin-top: 2.6em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--sl-color-hairline);
+  counter-reset: subsection;
+}
+.sl-markdown-content h3 { font-size: 1.05rem; font-weight: 700; margin-top: 1.9em; }
+
+/* ---- journal-style section numbering ---- */
+.sl-markdown-content h2:not(.no-number)::before {
+  counter-increment: section;
+  content: counter(section) '.\00a0\00a0';
+}
+.sl-markdown-content h3:not(.no-number)::before {
+  counter-increment: subsection;
+  content: counter(section) '.' counter(subsection) '\00a0\00a0';
+  font-weight: 400;
+}
+
+/* ---- links: journal blue ---- */
+.sl-markdown-content a { color: var(--sl-color-accent); text-underline-offset: 2px; }
+.sl-markdown-content a:hover { color: var(--sl-color-accent-high); }
+
+/* ---- code blocks ---- */
+.sl-markdown-content .expressive-code { margin: 1.6em 0; }
+
+/* ---- tables read like a results table ---- */
+.sl-markdown-content table { font-size: 0.86rem; }
+.sl-markdown-content th {
+  font-family: 'Merriweather Sans', sans-serif;
+  border-bottom: 2px solid #1a1a1a;
+}
+
+/* left nav in the sans face, active item gets a blue rule */
+.sidebar-content a { font-family: 'Merriweather Sans', sans-serif; }
+.sidebar-content a[aria-current='page'] {
+  font-weight: 700;
+  border-left: 3px solid var(--sl-color-accent);
+  padding-left: calc(var(--sl-sidebar-item-padding-inline) - 3px);
+}

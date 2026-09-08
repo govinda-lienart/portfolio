@@ -1,0 +1,93 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const year = new Date().getFullYear();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+    <title>{title} — Govinda Lienart</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Spectral:ital,wght@0,300;0,400;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header>
+      <a class="wordmark" href={`${base}/`}>Govinda&nbsp;Lienart<small>Machine-learning engineer</small></a>
+      <nav class="hnav">
+        <a href={`${base}/about/`}>About me</a>
+        <a href={`${base}/contact/`}>Contact me</a>
+        <a href={`${base}/aquamind/`}>AquaMind</a>
+      </nav>
+    </header>
+
+    <main>
+      <p class="eyebrow">{title}</p>
+      <slot />
+    </main>
+
+    <footer>
+      <span>© {year} Govinda Lienart</span>
+      <span><a href={`${base}/`}>← back to the portfolio</a></span>
+    </footer>
+
+    <style is:global>
+      :root {
+        --ground: #0b0d0c; --bone: #e9e4d7; --bone-dim: #9a9c8f;
+        --line: rgba(233, 228, 215, 0.13); --accent: #c8502f;
+        --disp: 'Fraunces', Georgia, serif; --body: 'Spectral', Georgia, serif;
+        --mono: 'IBM Plex Mono', ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: var(--ground); color: var(--bone); font-family: var(--body);
+        font-weight: 300; line-height: 1.7; -webkit-font-smoothing: antialiased;
+      }
+      a { color: var(--accent); }
+      .eyebrow {
+        font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.24em;
+        text-transform: uppercase; color: var(--accent); font-weight: 500;
+      }
+      header {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 1.05rem clamp(1rem, 4vw, 2.5rem); border-bottom: 1px solid var(--line);
+      }
+      header .wordmark { font-family: var(--disp); font-weight: 500; color: var(--accent); text-decoration: none; }
+      header .wordmark small {
+        display: block; font-family: var(--mono); font-size: 0.56rem;
+        letter-spacing: 0.22em; color: var(--bone-dim); margin-top: 0.15rem; text-transform: uppercase;
+      }
+      .hnav { display: flex; gap: clamp(0.9rem, 2vw, 1.7rem); }
+      .hnav a {
+        font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.16em;
+        text-transform: uppercase; color: var(--bone-dim); text-decoration: none;
+      }
+      .hnav a:hover { color: var(--accent); }
+      main { max-width: 44rem; margin: 0 auto; padding: 4rem clamp(1.4rem, 6vw, 3rem) 6rem; }
+      main h1 {
+        font-family: var(--disp); font-weight: 400; font-size: clamp(2rem, 5vw, 3rem);
+        line-height: 1.1; margin: 0.8rem 0 1.4rem;
+      }
+      main h2 { font-family: var(--disp); font-weight: 500; font-size: 1.4rem; margin: 2rem 0 0.6rem; }
+      main p { margin-bottom: 1rem; color: var(--bone); }
+      main ul { margin: 0 0 1rem 1.2rem; color: var(--bone); }
+      footer {
+        padding: 2.5rem clamp(1.4rem, 7vw, 7rem); border-top: 1px solid var(--line);
+        font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em;
+        color: var(--bone-dim); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+      }
+      footer a { color: var(--bone-dim); text-decoration: none; }
+    </style>
+  </body>
+</html>

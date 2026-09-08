@@ -1,0 +1,35 @@
+---
+interface Props {
+  meta?: string;
+}
+const { meta } = Astro.props;
+---
+
+<div class="am-abstract">
+  {meta && <p class="am-abstract__meta">{meta}</p>}
+  <h2 class="no-number">Abstract</h2>
+  <slot />
+</div>
+
+<style>
+  .am-abstract {
+    background: var(--sl-color-gray-7, #f7f8fa);
+    border-left: 3px solid var(--sl-color-accent);
+    padding: 0.9rem 1.3rem;
+    margin: 1.5rem 0 2.5rem;
+  }
+  .am-abstract__meta {
+    font-family: 'Merriweather Sans', sans-serif;
+    font-size: 0.72rem;
+    color: var(--sl-color-text);
+    opacity: 0.7;
+    margin: 0 0 0.6rem;
+  }
+  .am-abstract :global(h2) {
+    margin-top: 0.2rem !important;
+    font-size: 1.05rem;
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+  }
+  .am-abstract :global(p:last-child) { margin-bottom: 0; }
+</style>
