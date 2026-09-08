@@ -9,13 +9,10 @@
   --sl-font: 'Merriweather', Georgia, serif;
   --sl-font-mono: 'Roboto Mono', ui-monospace, monospace;
 
-  /* journal blue accent (links, headings, active nav) */
+  /* journal blue accent */
   --sl-color-accent-low: #d7e6f2;
   --sl-color-accent: #2a6496;
   --sl-color-accent-high: #1a4a73;
-
-  /* one orange tie back to the hero — used only for the wordmark + active nav rule */
-  --am-terracotta: #c8502f;
 
   --sl-content-width: 50rem;
 }
@@ -93,17 +90,10 @@
   border-bottom: 2px solid #1a1a1a;
 }
 
-/* left nav in the sans face; active item gets the terracotta rule (hero tie) */
+/* left nav in the sans face, active item gets a blue rule */
 .sidebar-content a { font-family: 'Merriweather Sans', sans-serif; }
 .sidebar-content a[aria-current='page'] {
   font-weight: 700;
-  color: var(--sl-color-text);
-  border-left: 3px solid var(--am-terracotta);
+  border-left: 3px solid var(--sl-color-accent);
   padding-left: calc(var(--sl-sidebar-item-padding-inline) - 3px);
-}
-
-/* site wordmark top-left: terracotta, matches the hero */
-.site-title {
-  color: var(--am-terracotta) !important;
-  font-weight: 800;
 }
