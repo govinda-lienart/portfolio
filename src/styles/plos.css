@@ -50,8 +50,7 @@
 :root[data-theme='dark'] .content-panel h1#_top { color: var(--sl-color-accent-low) !important; }
 
 .sl-markdown-content {
-  font-size: 0.95rem;
-  line-height: 1.8;
+  line-height: 1.75;
   counter-reset: section am-figure;
 }
 .sl-markdown-content p,
