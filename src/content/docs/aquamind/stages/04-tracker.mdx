@@ -3,6 +3,14 @@ title: "Stage 4 · Custom tracker"
 description: "A custom SORT-style tracker — and the experiment log of the earlier Kalman iteration that led to it."
 ---
 
+import PaperHeader from '../../../../components/PaperHeader.astro';
+
+<PaperHeader
+  subtitle="A custom SORT-style tracker — and the experiment log of the earlier Kalman iteration that led to it."
+  venue="AquaMind · Stage 4"
+  meta="Constant-velocity motion · OC-SORT direction term · Hungarian matching · merge-aware geometry"
+/>
+
 The tracker takes YOLO detections and assigns a permanent ID (Fish 1–5) to each
 fish, holding it across the whole video through occlusion, plant cover, wall
 approaches and crossings. The detector works well; the hard problem is **identity

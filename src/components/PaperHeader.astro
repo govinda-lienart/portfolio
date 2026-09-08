@@ -1,0 +1,53 @@
+---
+interface Props {
+  /** italic one-line subtitle, like a journal article */
+  subtitle: string;
+  /** author line; defaults to the site author */
+  authors?: string;
+  /** e.g. "AquaMind · Stage 8" */
+  venue?: string;
+  /** publication-style date, e.g. "September 2026" */
+  date?: string;
+  /** optional extra meta: video, dataset, event count … */
+  meta?: string;
+}
+const {
+  subtitle,
+  authors = 'Govinda Lienart',
+  venue = 'AquaMind',
+  date,
+  meta,
+} = Astro.props;
+
+const metaBits = [authors, venue, date].filter(Boolean).join('  ·  ');
+---
+
+<div class="paper-header">
+  <p class="paper-subtitle">{subtitle}</p>
+  <p class="paper-meta">{metaBits}</p>
+  {meta && <p class="paper-meta paper-meta--sub">{meta}</p>}
+</div>
+
+<style>
+  .paper-header {
+    margin: -0.6rem 0 2.2rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 2px solid var(--sl-color-text);
+  }
+  .paper-subtitle {
+    font-family: 'Merriweather', Georgia, serif;
+    font-style: italic;
+    font-size: 1.15rem;
+    line-height: 1.5;
+    color: var(--sl-color-gray-2, #565656);
+    margin: 0 0 0.9rem;
+  }
+  .paper-meta {
+    font-family: 'Merriweather Sans', -apple-system, sans-serif;
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+    color: var(--sl-color-gray-3, #6b6b6b);
+    margin: 0.15rem 0 0;
+  }
+  .paper-meta--sub { font-family: 'Roboto Mono', monospace; font-size: 0.68rem; }
+</style>

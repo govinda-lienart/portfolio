@@ -4,6 +4,13 @@ description: "Hand-labelling every visible fish with bounding boxes, exporting Y
 ---
 
 import FigureSrc from '../../../../components/FigureSrc.astro';
+import PaperHeader from '../../../../components/PaperHeader.astro';
+
+<PaperHeader
+  subtitle="Hand-labelling every visible fish, exporting YOLO format, and storing each bounding box as a relational record."
+  venue="AquaMind · Stage 2"
+  meta="Label Studio (Docker) · YOLO export · 366 boxes / 61 frames · MySQL"
+/>
 
 Stage 2 implements the annotation layer of the AquaMind pipeline, where each
 extracted frame from Stage 1 is manually labelled by drawing bounding boxes around

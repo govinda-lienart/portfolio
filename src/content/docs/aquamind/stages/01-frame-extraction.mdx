@@ -4,9 +4,16 @@ description: Turning raw aquarium video into a structured, frame-level dataset w
 ---
 
 import Figure from '../../../../components/Figure.astro';
+import PaperHeader from '../../../../components/PaperHeader.astro';
 import hevcFaded from '../../../../assets/aquamind/stage-01/hevc-faded.png';
 import h264Settings from '../../../../assets/aquamind/stage-01/h264-settings.png';
 import sqlVerify from '../../../../assets/aquamind/stage-01/sql-verify.png';
+
+<PaperHeader
+  subtitle="Turning raw aquarium video into a structured, frame-level dataset with persistent metadata."
+  venue="AquaMind · Stage 1"
+  meta="Videos: IMG_*.MOV · OpenCV · MySQL 8.4 (Docker) · 1 frame/sec"
+/>
 
 Stage 1 implements the initial ingestion layer of the AquaMind pipeline,
 transforming raw aquarium video footage into a structured, frame-level dataset
