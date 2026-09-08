@@ -6,12 +6,23 @@ import starlight from '@astrojs/starlight';
 export default defineConfig({
   site: 'https://govinda-lienart.github.io',
   base: '/portfolio',
+  devToolbar: { enabled: false },
   integrations: [
     starlight({
       title: 'AquaMind',
+      logo: {
+        src: './src/assets/aquamind-logo.svg',
+        replacesTitle: true,
+      },
       description:
         'Automated computer-vision analysis of zebrafish behaviour — an end-to-end PyTorch + OpenCV pipeline.',
       customCss: ['./src/styles/plos.css'],
+      head: [
+        {
+          tag: 'script',
+          attrs: { src: '/portfolio/lightbox.js', defer: true },
+        },
+      ],
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/govinda-lienart/AquaMind' },
       ],

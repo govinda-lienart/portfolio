@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 34" fill="none" role="img" aria-label="AquaMind">
+  <g fill="#e6b24c">
+    <path d="M12 17c6-9 20-11 27 0-7 11-21 9-27 0Z"/>
+    <path d="M12 17 2 10l3.4 7L2 24Z"/>
+  </g>
+  <circle cx="31" cy="14" r="1.7" fill="#0b0d0c"/>
+  <text x="52" y="24" font-family="Merriweather, Georgia, serif" font-size="20" font-weight="700" fill="#4d86bd" letter-spacing="0.2">AquaMind</text>
+</svg>

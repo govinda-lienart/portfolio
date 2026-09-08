@@ -26,3 +26,7 @@ pnpm-debug.log*
 # personal scratch notes (never committed)
 NOTES.local.md
 *.local.md
+
+# raw hero video source (compressed hero.mp4 is committed instead)
+src/assets/hero/*.MOV
+src/assets/hero/*.mov

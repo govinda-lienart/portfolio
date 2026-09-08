@@ -97,3 +97,96 @@
   border-left: 3px solid var(--sl-color-accent);
   padding-left: calc(var(--sl-sidebar-item-padding-inline) - 3px);
 }
+
+/* ============================================================
+   Image lightbox (public/lightbox.js)
+   ============================================================ */
+.sl-markdown-content img.lightbox-trigger { cursor: zoom-in; }
+
+.lightbox-overlay[hidden] { display: none !important; }
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(12, 14, 16, 0.94);
+  backdrop-filter: blur(2px);
+}
+.lightbox-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vmin;
+  overflow: hidden;
+  cursor: default;
+}
+.lightbox-stage.is-zoomed { cursor: grab; }
+.lightbox-stage.is-zoomed:active { cursor: grabbing; }
+.lightbox-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 2px;
+  box-shadow: 0 12px 55px rgba(0, 0, 0, 0.6);
+  transition: transform 0.12s ease-out;
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lightbox-bar {
+  position: fixed;
+  bottom: 1.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 2rem;
+}
+.lightbox-level {
+  min-width: 3.2rem;
+  text-align: center;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.78rem;
+  color: #fff;
+}
+.lightbox-btn {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 1rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 1.4rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.lightbox-btn.lightbox-reset { font-size: 0.72rem; letter-spacing: 0.04em; }
+.lightbox-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+.lightbox-close {
+  position: fixed;
+  top: 1rem;
+  right: 1.3rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  min-width: 2.6rem;
+  padding: 0;
+  font-size: 1.8rem;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: rgba(0, 0, 0, 0.4);
+}
+.lightbox-close:hover { transform: scale(1.08); }
