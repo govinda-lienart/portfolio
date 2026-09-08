@@ -22,3 +22,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# personal scratch notes (never committed)
+NOTES.local.md
+*.local.md
