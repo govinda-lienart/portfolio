@@ -34,6 +34,7 @@ export default defineConfig({
         { label: 'Pipeline overview', link: '/aquamind/pipeline/' },
         {
           label: 'Pipeline stages',
+          collapsed: false,
           items: [
             { label: '1 · Frame extraction', link: '/aquamind/stages/01-frame-extraction/' },
             { label: '2 · Annotation', link: '/aquamind/stages/02-annotation/' },

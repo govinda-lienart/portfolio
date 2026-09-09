@@ -98,6 +98,20 @@
   padding-left: calc(var(--sl-sidebar-item-padding-inline) - 3px);
 }
 
+/* right-hand "On this page" — same solid-blue highlight as the sidebar */
+starlight-toc nav { font-family: 'Merriweather Sans', sans-serif; }
+starlight-toc a[aria-current='true'],
+starlight-toc a[aria-current='true'] span {
+  font-weight: 700;
+  color: var(--sl-color-text-invert) !important;
+}
+starlight-toc a[aria-current='true'] {
+  background-color: var(--sl-color-text-accent);
+  border-radius: 4px;
+  padding-inline: 0.4rem;
+  margin-inline: -0.4rem;
+}
+
 /* ============================================================
    Image lightbox (public/lightbox.js)
    ============================================================ */
