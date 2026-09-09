@@ -44,9 +44,9 @@ pip install opencv-python mysql-connector-python
 
 Core dependencies:
 
-- `opencv-python` — video decoding and frame extraction
-- `mysql-connector-python` — relational database connectivity
-- `os`, `datetime` — standard-library modules for filesystem and timestamp management
+- `opencv-python`: video decoding and frame extraction
+- `mysql-connector-python`: relational database connectivity
+- `os`, `datetime`: standard-library modules for filesystem and timestamp management
 
 ## Data-acquisition considerations
 
@@ -149,8 +149,8 @@ terminates.
 ### Frame storage
 
 Each selected frame is saved as a PNG image to preserve full image quality without
-compression loss — important because the dataset is intended for future annotation
-and machine-learning tasks where pixel-level accuracy matters. For every frame the
+compression loss. This matters because the dataset is intended for future annotation
+and machine-learning tasks where pixel-level accuracy counts. For every frame the
 system records its index and computes its timestamp in seconds relative to the
 start of the video using `frame_count / fps`.
 

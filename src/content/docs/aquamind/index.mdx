@@ -1,6 +1,6 @@
 ---
 title: AquaMind
-description: Automated computer-vision analysis of zebrafish behaviour — an end-to-end PyTorch + OpenCV pipeline.
+description: Automated computer-vision analysis of zebrafish behaviour, an end-to-end PyTorch + OpenCV pipeline.
 tableOfContents: false
 ---
 
@@ -32,13 +32,13 @@ and feeding strikes.
 | Layer | Tools |
 |---|---|
 | Detection | YOLOv8, fine-tuned on hand-labelled frames |
-| Tracking | a custom SORT-style tracker — constant-velocity motion model, OC-SORT direction consistency, merge-aware geometry, optional learned appearance embedding |
+| Tracking | a custom SORT-style tracker: constant-velocity motion model, OC-SORT direction consistency, merge-aware geometry, optional learned appearance embedding |
 | Behaviour | kinematic features and CNN + LSTM classifiers, per behaviour |
 | Data | MySQL for frames, annotations and tracks |
 | ML operations | MLflow for experiment tracking and a model registry, DVC for dataset versioning |
 
 ## Where to start
 
-- [Introduction](/portfolio/aquamind/introduction/) — background and goal
-- [Pipeline overview](/portfolio/aquamind/pipeline/) — how the stages fit together
-- [Stage 1 · Frame extraction](/portfolio/aquamind/stages/01-frame-extraction/) — the build, stage by stage
+- [Introduction](/portfolio/aquamind/introduction/): background and goal
+- [Pipeline overview](/portfolio/aquamind/pipeline/): how the stages fit together
+- [Stage 1 · Frame extraction](/portfolio/aquamind/stages/01-frame-extraction/): the build, stage by stage

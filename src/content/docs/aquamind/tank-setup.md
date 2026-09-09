@@ -6,7 +6,7 @@ description: "The observation tank, camera and recording protocol."
 ## The tank
 
 A 35 × 21 × 23 cm side-view aquarium with an Anubias plant, dark gravel substrate
-and PVC-pipe shelters. The fish are *Danio rerio* — a mix of GloFish and golden
+and PVC-pipe shelters. The fish are *Danio rerio*, a mix of GloFish and golden
 morph, all labelled `danio_rerio`. The plant and pipes are deliberate: they create
 the occlusion that makes identity persistence hard, which is the problem the
 tracker and re-identification stages exist to solve.
@@ -15,7 +15,7 @@ tracker and re-identification stages exist to solve.
 
 A phone camera films the whole tank from the side at 60 fps. Early recordings in
 HEVC (H.265) produced washed-out frames when decoded by OpenCV, so recording was
-switched to H.264 ("Most Compatible" mode) for deterministic decoding — see
+switched to H.264 ("Most Compatible" mode) for deterministic decoding. See
 [Stage 1](/portfolio/aquamind/stages/01-frame-extraction/).
 
 ## Videos in use
@@ -30,8 +30,8 @@ switched to H.264 ("Most Compatible" mode) for deterministic decoding — see
 
 ## Database
 
-A MySQL database (`aquamind`) holds five tables — `videos`, `frames`,
-`annotation_sets`, `annotations` and `tracks` — running in a Docker container. The
+A MySQL database (`aquamind`) holds five tables (`videos`, `frames`,
+`annotation_sets`, `annotations` and `tracks`) running in a Docker container. The
 `tracks` table is self-sufficient (it stores `frame_number`, `timestamp` and
 `video_id` directly), so behaviour analysis reads it without joining back to
 `frames`.

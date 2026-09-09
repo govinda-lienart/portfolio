@@ -1,6 +1,6 @@
 ---
 title: "Stage 8 · Feeding-strike detection"
-description: "Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN–LSTM on image crops."
+description: "Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN-LSTM on image crops."
 ---
 
 import Abstract from '../../../../components/Abstract.astro';
@@ -8,21 +8,21 @@ import PaperHeader from '../../../../components/PaperHeader.astro';
 import FigureSrc from '../../../../components/FigureSrc.astro';
 
 <PaperHeader
-  subtitle="Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN–LSTM on image crops."
+  subtitle="Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN-LSTM on image crops."
   venue="AquaMind · Stage 8"
   date="September 2026"
-  meta="Video: IMG_2349.MOV (4–5 fish, food-injection segment) · 119 labelled strikes"
+  meta="Video: IMG_2349.MOV (4-5 fish, food-injection segment) · 119 labelled strikes"
 />
 
 <Abstract>
 A feeding strike is a fast, subtle appearance-and-posture event with no visible
-prey to anchor on — a harder computer-vision target than the spatially "loud"
-behaviours of earlier stages. This stage tests whether a strike can be detected
-automatically from video, and how far a geometry-only approach gets before
-appearance information is needed. A geometry-only baseline lands near chance
-(~61 % accuracy), which is the evidence that appearance features are actually
-required; a CNN–LSTM on image crops (DINOv2 `vits14` features → LSTM, with early
-stopping) reaches **70 % accuracy, 0.71 precision, 0.71 recall**.
+prey to anchor on. That makes it a harder computer-vision target than the
+spatially "loud" behaviours of earlier stages. This stage tests whether a strike
+can be detected automatically from video, and how far a geometry-only approach
+gets before appearance information is needed. A geometry-only baseline lands near
+chance (~61 % accuracy), which is the evidence that appearance features are
+actually required. A CNN-LSTM on image crops (DINOv2 `vits14` features into an
+LSTM, with early stopping) reaches **70 % accuracy, 0.71 precision, 0.71 recall**.
 </Abstract>
 
 ## Introduction
@@ -39,8 +39,8 @@ For computer vision, a feeding strike is a harder target than the behaviours in
 the previous stage. Chasing, depth preference and other spatially "loud"
 behaviours have a clear geometric signature: they are defined by where a fish is
 and how it moves relative to the tank or to another fish. A feeding strike is not.
-Its signal lives in appearance and posture — a brief body vibration or S-bend and
-a mouth gape — rather than in position. The prey is a tiny particle, invisible at
+Its signal lives in appearance and posture (a brief body vibration or S-bend and
+a mouth gape) rather than in position. The prey is a tiny particle, invisible at
 screen resolution, so there is no visible target to anchor on. The whole event is
 short and easy to miss when the fish is not in sharp focus.
 
@@ -48,32 +48,32 @@ short and easy to miss when the fish is not in sharp focus.
 
 This stage tests whether a feeding strike can be detected automatically from
 video, and how far a geometry-only approach gets before appearance information is
-needed. The one component that might still carry a geometric signal is the burst —
-a strike burst may be faster or sharper than one in normal swimming — but I expect
-it will not be enough on its own, and that reliable detection needs a model
-working from the image directly: a CNN extracting appearance and posture per
+needed. The one component that might still carry a geometric signal is the burst,
+since a strike burst may be faster or sharper than one in normal swimming. Even
+so, I expect it will not be enough on its own, and that reliable detection needs a
+model working from the image directly: a CNN extracting appearance and posture per
 frame, a sequence model learning how they change across the strike. The stage is
-built in that order: a geometry-only baseline first, then a CNN–LSTM pipeline on
+built in that order: a geometry-only baseline first, then a CNN-LSTM pipeline on
 image crops.
 
 ## Methods
 
 Stage 8 turns a set of labelled strike events into a trained per-fish strike
 classifier. The tracker outputs from Stage 4 and the strike labels from Phase A
-are first cut into fixed-length windows — short single-fish clips around a
-candidate moment — with an equal number of non-strike windows for balance. Those
+are first cut into fixed-length windows (short single-fish clips around a
+candidate moment), with an equal number of non-strike windows for balance. Those
 windows then feed two pipelines that are compared on identical data: a
-geometry-only baseline that works from movement alone, and a CNN–LSTM that works
+geometry-only baseline that works from movement alone, and a CNN-LSTM that works
 from the fish's appearance, taking a per-frame embedding from a frozen DINOv2
 backbone and reading the sequence with an LSTM. The appearance path is the one of
-interest — a feeding strike has almost no geometric signature — and the baseline
+interest, because a feeding strike has almost no geometric signature. The baseline
 exists to show that geometry alone is not enough. The full flow is below; each
 step is described in turn.
 
 <FigureSrc
   src="/aquamind/stages/08-feeding-strike-pipeline.svg"
-  alt="Stage 8 feeding-strike pipeline. Two data inputs — tracks.parquet with per-fish crops from tracker.py, and feeding_labels.xlsx with 119 labelled strikes — feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with length-matched negatives. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN–LSTM fixed-window pipeline — build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping. Accuracy figures are reported in the Results section."
-  caption="Stage 8 pipeline — from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two pipelines: a geometry-only baseline (pink) and the CNN–LSTM (green scripts → orange model). The baseline landing near chance is what motivates the appearance model; performance figures are in Results. Click to zoom."
+  alt="Stage 8 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 119 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with length-matched negatives. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping). Accuracy figures are reported in the Results section."
+  caption="Stage 8 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two pipelines compared on identical data. A geometry-only baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; performance figures are in Results. Click to zoom."
 />
 
 ### Data
@@ -87,8 +87,8 @@ Positive and negative windows are designed to control for the injection
 disturbance itself: negatives are drawn from the **water-injection** sub-section,
 not from calm baseline, so the model has to learn "fish struck at food" rather
 than "something got injected". The chaotic feeding-frenzy cluster right at the
-injection point is **excluded** — too much occlusion and ID-switch risk for
-reliable per-fish attribution.
+injection point is **excluded**: occlusion and ID-switch risk make reliable
+per-fish attribution unsafe there.
 
 Two window designs were built and compared: a fixed 45-frame window and a
 whole-event window (real event span, with length-matched negatives).
@@ -96,35 +96,35 @@ whole-event window (real event span, with length-matched negatives).
 ### Pipeline
 
 Each step is a single script, and the file it writes is the file the next step
-reads — so one window of data can be traced from label to prediction.
+reads, so one window of data can be traced from label to prediction.
 
-**Windowing — `build_feeding_windows_fixed_window.py`.** Each labelled strike is
+**Windowing (`build_feeding_windows_fixed_window.py`).** Each labelled strike is
 reduced to a fixed 45-frame window centred on the strike, so every example given
 to the model has the same length regardless of how long the original event ran.
 For every positive window, one negative window is drawn from the water-injection
 segment rather than from calm baseline, so the two classes differ only in whether
 a strike occurred, not in whether the tank was disturbed. The train/test split is
-decided here — before any crops or features exist — so no frame from a test
-strike can leak into training. The output is one row per fish-window, carrying
-the fish id, the window's start frame, its label, and its split; this table is
-what the crop step reads next.
+decided here, before any crops or features exist, so no frame from a test strike
+can leak into training. The output is one row per fish-window, carrying the fish
+id, the window's start frame, its label, and its split; this table is what the
+crop step reads next.
 
-{/* TODO (Govinda): write the crop / embedding / LSTM steps in the same shape —
-    reads what, does what + the one non-obvious decision, writes what schema.
+{/* TODO (Govinda): write the crop / embedding / LSTM steps in the same shape.
+    Reads what, does what plus the one non-obvious decision, writes what schema.
     Verify every filename and column against the actual scripts. */}
 
 ### Model
 
-- **Geometry baseline** — kinematic features (speed, acceleration, burst) into
-  logistic regression / random forest / XGBoost.
-- **CNN–LSTM** — per-frame crops → a frozen DINOv2 backbone (`vits14`) → a
-  sequence of embedding vectors → an LSTM → a binary strike / no-strike head.
-  Backbones `vitb14` and ResNet18 were also tried and were worse or mixed.
+- **Geometry baseline.** Kinematic features (speed, acceleration, burst) into
+  logistic regression, random forest or XGBoost.
+- **CNN-LSTM.** Per-frame crops into a frozen DINOv2 backbone (`vits14`), giving a
+  sequence of embedding vectors, then an LSTM, then a binary strike / no-strike
+  head. Backbones `vitb14` and ResNet18 were also tried and were worse or mixed.
 
 ### Evaluation
 
 Accuracy, precision and recall on a held-out test split. Loss curves are inspected
-directly — the 200-epoch run showed train loss going to zero while test loss
+directly. The 200-epoch run showed train loss going to zero while test loss
 bottomed at epoch 22 and then climbed, i.e. real overfitting. **Early stopping**
 (keep the minimum-test-loss checkpoint, not the final epoch) was added, and the
 epoch-22 checkpoint is the reported model.
@@ -133,9 +133,9 @@ epoch-22 checkpoint is the reported model.
 
 | Model | Accuracy | Precision | Recall |
 |---|---|---|---|
-| Geometry-only baseline | ~0.61 | — | — |
-| CNN–LSTM, fixed 45-frame window | ~0.64 | — | — |
-| **CNN–LSTM, whole-event (epoch-22 checkpoint)** | **0.70** | **0.71** | **0.71** |
+| Geometry-only baseline | ~0.61 | | |
+| CNN-LSTM, fixed 45-frame window | ~0.64 | | |
+| **CNN-LSTM, whole-event (epoch-22 checkpoint)** | **0.70** | **0.71** | **0.71** |
 
 The geometry baseline landing near chance is the useful result: it is clean
 evidence that appearance features were genuinely needed here, not an assumption.
@@ -145,11 +145,11 @@ documented comparison points.
 ## Discussion
 
 The headline number is the **early-stopped** figure, not the higher uncorrected
-200-epoch number — a distinction only caught by looking at the actual loss curve
-before trusting the result. That check is the point of the stage as much as the
-detector is. The next step (Phase F — overlay, per-fish counters, an automated
-report) is deferred.
+200-epoch number. That distinction was only caught by looking at the actual loss
+curve before trusting the result, and that check is the point of the stage as
+much as the detector is. The next step (Phase F: overlay, per-fish counters, an
+automated report) is deferred.
 
 ## References
 
-Cited literature and tools — to be added.
+Cited literature and tools to be added.

@@ -5,9 +5,9 @@ description: "Who built AquaMind and why."
 
 ## Who built this
 
-Govinda Lienart — behavioural ecologist (PhD, James Cook University; published in
+Govinda Lienart, behavioural ecologist (PhD, James Cook University; published in
 *Animal Behaviour*) moving into machine-learning engineering. For years I scored
-fish behaviour by hand — line crossings, feeding strikes, chases — frame by frame.
+fish behaviour by hand, frame by frame: line crossings, feeding strikes, chases.
 AquaMind automates that work with a computer-vision pipeline.
 
 ## Why this project

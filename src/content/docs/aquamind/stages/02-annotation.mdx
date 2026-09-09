@@ -31,7 +31,7 @@ Video → Frames → Annotations → Database → AI model
 ### Environment setup
 
 The same `aquamind` Conda environment from Stage 1 is used. No additional Python
-packages are required — `mysql-connector-python`, `os` and `datetime` are already
+packages are required; `mysql-connector-python`, `os` and `datetime` are already
 installed.
 
 ### Labelling tool
@@ -43,7 +43,7 @@ No local installation is required beyond Docker Desktop being active.
 
 Label Studio is launched as a single Docker container using the
 `heartexlabs/label-studio:latest` image. Port 8080 is mapped to the host, and a
-volume mount gives Label Studio persistent storage — all annotation data is
+volume mount gives Label Studio persistent storage: all annotation data is
 written to the local `mydata` folder on the host rather than inside the container,
 so the work survives a container restart.
 
@@ -60,7 +60,7 @@ class `danio_rerio_golden`. All extracted PNG frames from Stage 1 are imported a
 individual tasks.
 
 Each frame is opened individually and a bounding box is drawn around every visible
-fish — one box per fish.
+fish, one box per fish.
 
 ## YOLO export
 
@@ -89,7 +89,7 @@ making the format resolution-independent. For example:
 
 This line represents one fish: class 0 (`danio_rerio_golden`).
 
-<FigureSrc src="/aquamind/yolo-bbox-explainer.svg" alt="YOLO bounding-box coordinate diagram" caption="YOLO coordinate system — all values normalised between 0 and 1." />
+<FigureSrc src="/aquamind/yolo-bbox-explainer.svg" alt="YOLO bounding-box coordinate diagram" caption="YOLO coordinate system: all values normalised between 0 and 1." />
 
 ## Database schema
 
@@ -139,7 +139,7 @@ correct source frame regardless of file ordering.
 ### Reading and casting bounding-box values
 
 Each line represents one bounding box. The five whitespace-separated values are
-read and cast — `class_id` to `int`, the four coordinates to `float` — so they are
+read and cast (`class_id` to `int`, the four coordinates to `float`) so they are
 stored with the correct types in MySQL.
 
 ### Inserting into MySQL
