@@ -1,6 +1,6 @@
 <svg width="100%" viewBox="0 0 780 660" role="img" xmlns="http://www.w3.org/2000/svg">
   <title>Stage 8 — feeding-strike classifier pipeline (fixed-window)</title>
-  <desc>Two upstream inputs (dashed, produced by earlier stages) — tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 119 strikes labelled in Phase A — feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with length-matched negatives. The windows then fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline — build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping. Accuracy figures are reported in the Results section.</desc>
+  <desc>Two upstream inputs (dashed, produced by earlier stages) — tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A — feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives drawn from the sand-injection control segment. The windows then fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline — build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping. Accuracy figures are reported in the Results section.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -25,7 +25,7 @@
   </defs>
 
   <text class="d-title" x="390" y="26">Stage 8 — Feeding-Strike Classifier (CNN + LSTM)</text>
-  <text class="d-sub" x="390" y="44">video IMG_2349.MOV · food-injection segment · 119 labelled strikes · fixed-window pipeline</text>
+  <text class="d-sub" x="390" y="44">video IMG_2349.MOV · food-injection segment · 118 labelled strikes · fixed-window pipeline</text>
 
   <!-- inputs (upstream — dashed) -->
   <rect class="box" x="50" y="60" width="330" height="98" rx="8" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="4 3"/>
@@ -37,13 +37,13 @@
   <rect class="box" x="400" y="60" width="330" height="98" rx="8" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="4 3"/>
   <text class="prov" x="565" y="82">FROM PHASE A · MANUAL LABELLING</text>
   <text class="name" x="565" y="103">feeding_labels.xlsx</text>
-  <text class="desc" x="565" y="121">119 labelled strikes</text>
-  <text class="desc" x="565" y="138">pos = real food · neg = injected water</text>
+  <text class="desc" x="565" y="121">118 labelled strikes</text>
+  <text class="desc" x="565" y="138">pos = real food · neg = sand-injection control</text>
 
   <!-- shared windows step -->
   <rect class="box" x="210" y="196" width="360" height="58" rx="8" fill="#d5e8d4" stroke="#82b366"/>
   <text class="name" x="390" y="219">build_feeding_windows_fixed_window.py</text>
-  <text class="desc" x="390" y="238">fixed 45-frame windows · length-matched negatives</text>
+  <text class="desc" x="390" y="238">fixed 45-frame windows · count-matched negatives (sand segment)</text>
 
   <!-- LEFT: geometry baseline -->
   <text class="col-head-bl" x="200" y="308">GEOMETRY-ONLY BASELINE · comparison</text>

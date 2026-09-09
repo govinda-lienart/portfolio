@@ -11,7 +11,7 @@ import FigureSrc from '../../../../components/FigureSrc.astro';
   subtitle="Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN-LSTM on image crops."
   venue="AquaMind · Stage 8"
   date="September 2026"
-  meta="Video: IMG_2349.MOV (4-5 fish, food-injection segment) · 119 labelled strikes"
+  meta="Video: IMG_2349.MOV (4-5 fish, food-injection segment) · 118 labelled strikes"
 />
 
 <Abstract>
@@ -58,22 +58,19 @@ image crops.
 
 ## Methods
 
-Stage 8 turns a set of labelled strike events into a trained per-fish strike
-classifier. The tracker outputs from Stage 4 and the strike labels from Phase A
-are first cut into fixed-length windows (short single-fish clips around a
-candidate moment), with an equal number of non-strike windows for balance. Those
-windows then feed two pipelines that are compared on identical data: a
-geometry-only baseline that works from movement alone, and a CNN-LSTM that works
-from the fish's appearance, taking a per-frame embedding from a frozen DINOv2
-backbone and reading the sequence with an LSTM. The appearance path is the one of
-interest, because a feeding strike has almost no geometric signature. The baseline
-exists to show that geometry alone is not enough. The full flow is below; each
-step is described in turn.
+Stage 8 trains a per-fish feeding-strike classifier from a set of hand-labelled
+strike events. Two approaches are compared on an identical set of windows: a
+geometry baseline built from movement alone, and a CNN-LSTM built from the fish's
+appearance. The appearance model is the one of interest, because a feeding strike
+has little geometric signature, and the baseline is there to test that rather than
+assume it. Fig 1 shows the pipeline end to end; the subsections below follow it in
+order, and each step is a single script whose output file is the next step's
+input.
 
 <FigureSrc
   src="/aquamind/stages/08-feeding-strike-pipeline.svg"
-  alt="Stage 8 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 119 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with length-matched negatives. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping). Accuracy figures are reported in the Results section."
-  caption="Stage 8 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two pipelines compared on identical data. A geometry-only baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; performance figures are in Results. Click to zoom."
+  alt="Stage 8 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives from the sand-injection control segment. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping). Accuracy figures are reported in the Results section."
+  caption="Stage 8 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two approaches compared on identical data, a geometry baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; performance figures are in Results. Click to zoom."
 />
 
 ### Data
@@ -81,53 +78,68 @@ step is described in turn.
 The video `IMG_2349.MOV` is the documented feeding-experiment recording (2 min
 baseline / 2 min sand-injection / 2 min food injection) and is already tracked
 from earlier stages, so `tracks.parquet` and per-fish crops are reused directly.
-**119 real strikes** were labelled across the food-injection segment.
+**118 real strikes** were labelled across the food-injection segment.
 
 Positive and negative windows are designed to control for the injection
-disturbance itself: negatives are drawn from the **water-injection** sub-section,
-not from calm baseline, so the model has to learn "fish struck at food" rather
-than "something got injected". The chaotic feeding-frenzy cluster right at the
-injection point is **excluded**: occlusion and ID-switch risk make reliable
-per-fish attribution unsafe there.
+disturbance itself: negatives are drawn from the **sand-injection control
+segment** (frames 7505 to 14340), not from calm baseline, so the model has to
+learn "fish struck at food" rather than "something got injected". The chaotic
+feeding-frenzy cluster right at the injection point is **excluded**: occlusion and
+ID-switch risk make reliable per-fish attribution unsafe there.
 
-Two window designs were built and compared: a fixed 45-frame window and a
-whole-event window (real event span, with length-matched negatives).
+### Window construction
 
-### Pipeline
+`build_feeding_windows_fixed_window.py` turns each labelled strike into a fixed
+45-frame window centred on the midpoint of its labelled frame range. Forty-five
+frames is the shortest single strike seen during labelling, and a fixed length
+means the model sees every example on the same footing. For each positive window
+the script draws one non-overlapping negative window from the sand-injection
+control segment, so the two classes differ only in whether a strike occurred, not
+in whether the tank was disturbed. Any window holding a frame the tracker flagged
+as occluded or missing is dropped, so both approaches train and test on exactly
+the same windows. The script then makes a label-stratified 80/20 train/test split,
+before any crops or features exist; because there is one non-overlapping window
+per event, no frame from a test strike reaches training. Its output, `train_df`
+and `test_df` (one row per window: fish id, frame range, label, split), is the
+single source of truth for window membership everywhere downstream.
 
-Each step is a single script, and the file it writes is the file the next step
-reads, so one window of data can be traced from label to prediction.
+### Geometry baseline
 
-**Windowing (`build_feeding_windows_fixed_window.py`).** Each labelled strike is
-reduced to a fixed 45-frame window centred on the strike, so every example given
-to the model has the same length regardless of how long the original event ran.
-For every positive window, one negative window is drawn from the water-injection
-segment rather than from calm baseline, so the two classes differ only in whether
-a strike occurred, not in whether the tank was disturbed. The train/test split is
-decided here, before any crops or features exist, so no frame from a test strike
-can leak into training. The output is one row per fish-window, carrying the fish
-id, the window's start frame, its label, and its split; this table is what the
-crop step reads next.
+`train_feeding_classifier.py` reads the window tables and computes four kinematic
+features per window: mean and maximum speed, and mean and maximum burst, where
+burst is the frame-to-frame change in speed. Speed is capped at the 99.9th
+percentile and smoothed with a 5-frame centred rolling mean before burst is
+derived, to suppress single-frame tracker-jitter spikes. The four features feed
+logistic regression, a random forest and XGBoost, all at default settings and
+compared directly. The feature set is deliberately small: the goal is an honest
+floor for what movement alone can do, not a full kinematic model, since the
+appearance model is the focus of the stage.
 
-{/* TODO (Govinda): write the crop / embedding / LSTM steps in the same shape.
-    Reads what, does what plus the one non-obvious decision, writes what schema.
-    Verify every filename and column against the actual scripts. */}
+### Appearance model (CNN-LSTM)
 
-### Model
-
-- **Geometry baseline.** Kinematic features (speed, acceleration, burst) into
-  logistic regression, random forest or XGBoost.
-- **CNN-LSTM.** Per-frame crops into a frozen DINOv2 backbone (`vits14`), giving a
-  sequence of embedding vectors, then an LSTM, then a binary strike / no-strike
-  head. Backbones `vitb14` and ResNet18 were also tried and were worse or mixed.
+The appearance path is three scripts. `build_feeding_crops_fixed_window.py`
+expands each window into 45 ordered per-frame rows, each pointing at that frame's
+crop image (the tracker already saved the crops; this only builds the manifest),
+written grouped by event. `build_feeding_embeddings_fixed_window.py` loads a
+frozen DINOv2 `vits14` backbone once and passes each window's 45 crops through it
+in frame order, producing a `(45, 384)` embedding sequence; because the backbone
+never trains, these are computed once and cached as `.pt` files rather than
+recomputed each epoch. `train_feeding_lstm_fixed_window.py` then trains the only
+part that learns: a single-layer LSTM (hidden size 64) that reads the embedding
+sequence, with a linear head mapping its final hidden state to strike or no
+strike. Training uses cross-entropy with Adam (learning rate 1e-3, batch size 8)
+for up to 100 epochs.
 
 ### Evaluation
 
-Accuracy, precision and recall on a held-out test split. Loss curves are inspected
-directly. The 200-epoch run showed train loss going to zero while test loss
-bottomed at epoch 22 and then climbed, i.e. real overfitting. **Early stopping**
-(keep the minimum-test-loss checkpoint, not the final epoch) was added, and the
-epoch-22 checkpoint is the reported model.
+Both models are scored on the same held-out 20 percent test split, which is
+untouched during feature smoothing, training and checkpoint selection. Accuracy,
+precision and recall are reported for the strike class, where a false positive is
+a window predicted as a strike that was not one. For the CNN-LSTM, training and
+test loss are logged every epoch and the curves are read directly rather than
+trusting the final-epoch score, since on a dataset this small the training loss
+can keep falling well after the test loss has bottomed out; the model kept for
+reporting is the checkpoint at minimum test loss, not the last epoch.
 
 ## Results
 
