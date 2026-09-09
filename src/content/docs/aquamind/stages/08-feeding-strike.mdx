@@ -58,6 +58,18 @@ image crops.
 
 ## Methods
 
+Stage 8 turns a set of labelled strike events into a trained per-fish strike
+classifier. The tracker outputs from Stage 4 and the strike labels from Phase A
+are first cut into fixed-length windows — short single-fish clips around a
+candidate moment — with an equal number of non-strike windows for balance. Those
+windows then feed two pipelines that are compared on identical data: a
+geometry-only baseline that works from movement alone, and a CNN–LSTM that works
+from the fish's appearance, taking a per-frame embedding from a frozen DINOv2
+backbone and reading the sequence with an LSTM. The appearance path is the one of
+interest — a feeding strike has almost no geometric signature — and the baseline
+exists to show that geometry alone is not enough. The full flow is below; each
+step is described in turn.
+
 <FigureSrc
   src="/aquamind/stages/08-feeding-strike-pipeline.svg"
   alt="Stage 8 feeding-strike pipeline. Two data inputs — tracks.parquet with per-fish crops from tracker.py, and feeding_labels.xlsx with 119 labelled strikes — feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with length-matched negatives. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN–LSTM fixed-window pipeline — build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping. Accuracy figures are reported in the Results section."
@@ -80,6 +92,26 @@ reliable per-fish attribution.
 
 Two window designs were built and compared: a fixed 45-frame window and a
 whole-event window (real event span, with length-matched negatives).
+
+### Pipeline
+
+Each step is a single script, and the file it writes is the file the next step
+reads — so one window of data can be traced from label to prediction.
+
+**Windowing — `build_feeding_windows_fixed_window.py`.** Each labelled strike is
+reduced to a fixed 45-frame window centred on the strike, so every example given
+to the model has the same length regardless of how long the original event ran.
+For every positive window, one negative window is drawn from the water-injection
+segment rather than from calm baseline, so the two classes differ only in whether
+a strike occurred, not in whether the tank was disturbed. The train/test split is
+decided here — before any crops or features exist — so no frame from a test
+strike can leak into training. The output is one row per fish-window, carrying
+the fish id, the window's start frame, its label, and its split; this table is
+what the crop step reads next.
+
+{/* TODO (Govinda): write the crop / embedding / LSTM steps in the same shape —
+    reads what, does what + the one non-obvious decision, writes what schema.
+    Verify every filename and column against the actual scripts. */}
 
 ### Model
 
