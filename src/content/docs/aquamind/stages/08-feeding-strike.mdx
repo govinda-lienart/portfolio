@@ -75,29 +75,41 @@ input.
 
 ### Data
 
-The video `IMG_2349.MOV` is the documented feeding-experiment recording (2 min
-baseline / 2 min sand-injection / 2 min food injection) and is already tracked
-from earlier stages, so `tracks.parquet` and per-fish crops are reused directly.
-**118 real strikes** were labelled across the food-injection segment.
+The video `IMG_2349.MOV` is the documented feeding-experiment recording, already
+tracked from earlier stages, so `tracks.parquet` and the per-fish crops are reused
+directly. It has three phases of about two minutes each: a calm baseline, a
+control-injection phase in which tiny sand particles are delivered through the
+same tubing later used for the food (frames 7505 to 14340), and a food-injection
+phase (from frame 14340). **118 real strikes** were labelled by hand, all of them
+in the food-injection phase (frames 14617 to 21656).
 
-Positive and negative windows are designed to control for the injection
-disturbance itself: negatives are drawn from the **sand-injection control
-segment** (frames 7505 to 14340), not from calm baseline, so the model has to
-learn "fish struck at food" rather than "something got injected". The chaotic
-feeding-frenzy cluster right at the injection point is **excluded**: occlusion and
-ID-switch risk make reliable per-fish attribution unsafe there.
+Positives are taken from the food phase and negatives from the control-injection
+phase, not from the calm baseline. Both phases involve an injection through the
+tubing and the fish reacting to it, so the main systematic difference between a
+positive and a negative window is whether food was present; calm-baseline
+negatives would instead let the model succeed by detecting disturbance rather than
+feeding. The match is approximate, since injected sand settles within seconds
+while a feeding bout keeps the fish foraging for longer, but it is a closer
+control than calm footage. The chaotic feeding-frenzy burst right at the
+food-injection point is **excluded** from both classes: occlusion and ID-switch
+risk there make reliable per-fish attribution unsafe.
 
 ### Window construction
 
-`build_feeding_windows_fixed_window.py` turns each labelled strike into a fixed
-45-frame window centred on the midpoint of its labelled frame range. Forty-five
-frames is the shortest single strike seen during labelling, and a fixed length
-means the model sees every example on the same footing. For each positive window
-the script draws one non-overlapping negative window from the sand-injection
-control segment, so the two classes differ only in whether a strike occurred, not
-in whether the tank was disturbed. Any window holding a frame the tracker flagged
-as occluded or missing is dropped, so both approaches train and test on exactly
-the same windows. The script then makes a label-stratified 80/20 train/test split,
+`build_feeding_windows_fixed_window.py` turns each labelled strike into a
+fixed-length window centred on the midpoint of its labelled frame range. A fixed
+length is used rather than each event's real span because a deployed detector sees
+a continuous stream with no event boundaries: a fixed window slides along the
+input directly, while an event-length window would first need a separate stage to
+locate candidate events. The length is set to 45 frames (0.75 s at 60 fps), the
+75th percentile of labelled strike duration, so most windows contain the whole
+strike and the rest still contain its central lunge; a longer window was avoided
+because strikes occur roughly once a second during the feeding bout, so it would
+often capture a second strike. For each positive window the script draws one
+non-overlapping negative window at random from the control-injection phase,
+assigned to a random fish. Any window holding a frame the
+tracker flagged as occluded or missing is dropped, so both approaches train and
+test on exactly the same windows. The script then makes a label-stratified 80/20 train/test split,
 before any crops or features exist; because there is one non-overlapping window
 per event, no frame from a test strike reaches training. Its output, `train_df`
 and `test_df` (one row per window: fish id, frame range, label, split), is the
