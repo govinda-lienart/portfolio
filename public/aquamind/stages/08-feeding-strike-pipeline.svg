@@ -49,7 +49,7 @@
   <text class="name" x="200" y="342">train_feeding_classifier.py</text>
   <text class="desc" x="200" y="360">kinematic features → LR · RF · XGBoost</text>
   <rect class="box" x="70" y="410" width="260" height="42" rx="8" fill="#fce9e9" stroke="#b85450"/>
-  <text class="bl-res" x="200" y="436">≈ 61% accuracy — near chance</text>
+  <text class="bl-res" x="200" y="436">near chance</text>
   <text class="note" x="200" y="478">→ appearance features are needed</text>
 
   <!-- RIGHT: CNN-LSTM fixed-window -->
@@ -62,11 +62,10 @@
   <text class="name" x="580" y="427">build_feeding_embeddings_fixed_window.py</text>
   <text class="desc" x="580" y="445">DINOv2 vits14 (frozen) → per-frame embedding</text>
 
-  <rect class="box" x="410" y="494" width="340" height="96" rx="8" fill="#ffe6cc" stroke="#d79b00"/>
-  <text class="name" x="580" y="516">train_feeding_lstm_fixed_window.py</text>
-  <text class="desc" x="580" y="535">LSTM over the embedding sequence</text>
-  <text class="desc" x="580" y="552">early stopping · min test-loss checkpoint</text>
-  <text class="kept" x="580" y="574">≈ 64% accuracy (fixed 45-frame window)</text>
+  <rect class="box" x="410" y="500" width="340" height="76" rx="8" fill="#ffe6cc" stroke="#d79b00"/>
+  <text class="name" x="580" y="524">train_feeding_lstm_fixed_window.py</text>
+  <text class="desc" x="580" y="543">LSTM over the embedding sequence</text>
+  <text class="desc" x="580" y="560">early stopping · min test-loss checkpoint</text>
 
   <!-- edges -->
   <g fill="none" stroke="#555" stroke-width="1.5">
@@ -76,7 +75,7 @@
     <polyline points="390,254 390,283 580,283 580,316" marker-end="url(#arrow)"/>
     <polyline points="200,388 200,408" marker-end="url(#arrow)"/>
     <polyline points="580,376 580,404" marker-end="url(#arrow)"/>
-    <polyline points="580,464 580,492" marker-end="url(#arrow)"/>
+    <polyline points="580,464 580,498" marker-end="url(#arrow)"/>
     <polyline points="332,431 414,431" stroke="#999" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
   </g>
   <text class="tiny" x="373" y="424">motivates</text>
