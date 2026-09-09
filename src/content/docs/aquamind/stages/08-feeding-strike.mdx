@@ -5,6 +5,7 @@ description: "Machine learning for feeding-strike detection, from a geometry-onl
 
 import Abstract from '../../../../components/Abstract.astro';
 import PaperHeader from '../../../../components/PaperHeader.astro';
+import FigureSrc from '../../../../components/FigureSrc.astro';
 
 <PaperHeader
   subtitle="Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN–LSTM on image crops."
@@ -56,6 +57,12 @@ built in that order: a geometry-only baseline first, then a CNN–LSTM pipeline 
 image crops.
 
 ## Methods
+
+<FigureSrc
+  src="/aquamind/stages/08-feeding-strike-pipeline.svg"
+  alt="Stage 8 feeding-strike pipeline. Two data inputs — tracks.parquet with per-fish crops, and feeding_labels.xlsx with 119 labelled strikes — feed a four-step whole-event pipeline: build_feeding_windows_whole_event.py builds real event spans with length-matched negatives, build_feeding_crops_whole_event.py extracts a per-fish crop sequence per window, build_feeding_embeddings_whole_event.py runs a frozen DINOv2 vits14 backbone to a per-frame embedding, and train_feeding_lstm_whole_event.py trains an LSTM over the embedding sequence with early stopping. The kept model reaches 70% accuracy, 0.71 precision and 0.71 recall. A deferred downstream phase (overlay, per-fish counters, automated report) and a separate geometry-only baseline branch (about 61% accuracy) are shown as side paths."
+  caption="Stage 8 pipeline — from the reused tracker outputs and the strike labels through to the CNN–LSTM classifier. Green nodes are scripts, run top to bottom; the geometry-only baseline (pink) and Phase F (dashed) are side paths. Click to zoom."
+/>
 
 ### Data
 
