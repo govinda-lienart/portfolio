@@ -28,7 +28,7 @@ const year = new Date().getFullYear();
     <header>
       <a class="wordmark" href={`${base}/`}>
         Govinda&nbsp;Lienart
-        <small>Machine-learning engineer</small>
+        <small>Portfolio · {year}</small>
       </a>
       <nav class="hnav">
         <a href={`${base}/about/`}>About me</a>
@@ -160,19 +160,17 @@ const year = new Date().getFullYear();
         font-weight: 500;
         letter-spacing: 0.16em;
         text-transform: uppercase;
-        color: var(--gold);
+        color: #fff;
         text-decoration: none;
         padding: 0.5rem 0.9rem;
         border: 1px solid var(--gold);
         border-radius: 1px;
-        background: rgba(11, 13, 12, 0.35);
-        backdrop-filter: blur(2px);
-        transition: color 0.25s, background 0.25s, border-color 0.25s;
+        background: var(--blue-dim);
+        transition: color 0.25s, background 0.25s;
       }
       .hnav a:hover {
         color: #1a1206;
         background: var(--gold);
-        border-color: var(--gold);
       }
 
       .opening {
