@@ -51,7 +51,7 @@
 
 .sl-markdown-content {
   line-height: 1.75;
-  counter-reset: section am-figure;
+  counter-reset: section am-figure subsection;
 }
 .sl-markdown-content p,
 .sl-markdown-content li { text-align: left; }
@@ -61,8 +61,13 @@
   margin-top: 2.6em;
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--sl-color-hairline);
-  counter-reset: subsection;
 }
+/* Starlight wraps every heading in <div class="sl-heading-wrapper">, so a
+   counter-reset on <h2> is scoped to that wrapper and never reaches the
+   following <h3> wrappers (every h3 would restart at .1). Reset on the h2's
+   wrapper instead — it is a sibling of the h3 wrappers, so each new h2
+   correctly restarts the subsection count. */
+.sl-markdown-content .sl-heading-wrapper.level-h2 { counter-reset: subsection; }
 .sl-markdown-content h3 { font-size: 1.05rem; font-weight: 700; margin-top: 1.9em; }
 
 /* ---- journal-style section numbering ---- */
