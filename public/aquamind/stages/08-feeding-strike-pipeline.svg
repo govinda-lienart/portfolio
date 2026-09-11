@@ -1,6 +1,6 @@
-<svg width="100%" viewBox="0 0 780 660" role="img" xmlns="http://www.w3.org/2000/svg">
-  <title>Stage 8 — feeding-strike classifier pipeline (fixed-window)</title>
-  <desc>Two upstream inputs (dashed, produced by earlier stages) — tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A — feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives drawn from the sand-injection control segment. The windows then fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline — build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping. Accuracy figures are reported in the Results section.</desc>
+<svg width="100%" viewBox="0 0 780 820" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Stage 8 — feeding-strike classifier pipeline (fixed-window), including the negative-control test</title>
+  <desc>Two upstream inputs (dashed, produced by earlier stages) — tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A — feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives drawn from the sand-injection control segment. The windows then fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline — build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping, reaching 70 percent accuracy on the balanced test split. That trained model is then run by infer_feeding.py as a sliding-window classifier over full sand and food phases of the same recording, a negative control: it calls a strike on 46 percent of no-food windows versus 64 percent of real-feeding windows, mean P(strike) 0.48 versus 0.60, showing the balanced accuracy figure does not hold up on a realistic stream.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -69,6 +69,17 @@
   <text class="desc" x="580" y="543">LSTM over the embedding sequence</text>
   <text class="desc" x="580" y="560">early stopping · min test-loss checkpoint</text>
 
+  <!-- negative control: run the trained model as a stream test -->
+  <text class="col-head-ml" x="580" y="600">NEGATIVE CONTROL · does 70% hold on a stream?</text>
+  <rect class="box" x="410" y="610" width="340" height="58" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="580" y="631">infer_feeding.py</text>
+  <text class="desc" x="580" y="649">sliding-window test over full sand + food phases</text>
+
+  <rect class="box" x="400" y="686" width="360" height="56" rx="8" fill="#fce9e9" stroke="#b85450"/>
+  <text class="bl-res" x="580" y="708">46% vs 64% — near chance on a stream</text>
+  <text class="desc" x="580" y="727">mean P(strike) 0.48 vs 0.60, both near the 0.5 midpoint</text>
+  <text class="note" x="580" y="762">→ balanced accuracy was measuring the wrong thing</text>
+
   <!-- edges -->
   <g fill="none" stroke="#555" stroke-width="1.5">
     <polyline points="215,158 215,177 390,177 390,194" marker-end="url(#arrow)"/>
@@ -79,18 +90,20 @@
     <polyline points="580,376 580,404" marker-end="url(#arrow)"/>
     <polyline points="580,464 580,498" marker-end="url(#arrow)"/>
     <polyline points="332,431 414,431" stroke="#999" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+    <polyline points="580,576 580,608" marker-end="url(#arrow)"/>
+    <polyline points="580,668 580,684" marker-end="url(#arrow)"/>
   </g>
   <text class="tiny" x="373" y="424">motivates</text>
 
   <!-- legend -->
   <g>
-    <rect x="40" y="620" width="11" height="11" rx="2" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="3 2"/>
-    <text class="legend" x="57" y="629">upstream input (earlier stage)</text>
-    <rect x="255" y="620" width="11" height="11" rx="2" fill="#d5e8d4" stroke="#82b366"/>
-    <text class="legend" x="272" y="629">script step</text>
-    <rect x="365" y="620" width="11" height="11" rx="2" fill="#ffe6cc" stroke="#d79b00"/>
-    <text class="legend" x="382" y="629">trained model</text>
-    <rect x="490" y="620" width="11" height="11" rx="2" fill="#f8cecc" stroke="#b85450"/>
-    <text class="legend" x="507" y="629">comparison baseline</text>
+    <rect x="40" y="784" width="11" height="11" rx="2" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="3 2"/>
+    <text class="legend" x="57" y="793">upstream input (earlier stage)</text>
+    <rect x="255" y="784" width="11" height="11" rx="2" fill="#d5e8d4" stroke="#82b366"/>
+    <text class="legend" x="272" y="793">script step</text>
+    <rect x="365" y="784" width="11" height="11" rx="2" fill="#ffe6cc" stroke="#d79b00"/>
+    <text class="legend" x="382" y="793">trained model</text>
+    <rect x="490" y="784" width="11" height="11" rx="2" fill="#f8cecc" stroke="#b85450"/>
+    <text class="legend" x="507" y="793">near-chance finding</text>
   </g>
 </svg>
