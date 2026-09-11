@@ -6,6 +6,7 @@ description: "Machine learning for feeding-strike detection, from a geometry-onl
 import Abstract from '../../../../components/Abstract.astro';
 import PaperHeader from '../../../../components/PaperHeader.astro';
 import FigureSrc from '../../../../components/FigureSrc.astro';
+import VideoSrc from '../../../../components/VideoSrc.astro';
 
 <PaperHeader
   subtitle="Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN-LSTM on image crops."
@@ -16,13 +17,19 @@ import FigureSrc from '../../../../components/FigureSrc.astro';
 
 <Abstract>
 A feeding strike is a fast, subtle appearance-and-posture event with no visible
-prey to anchor on. That makes it a harder computer-vision target than the
+prey to anchor on, which makes it a harder computer-vision target than the
 spatially "loud" behaviours of earlier stages. This stage tests whether a strike
 can be detected automatically from video, and how far a geometry-only approach
 gets before appearance information is needed. A geometry-only baseline lands near
 chance (~61 % accuracy), which is the evidence that appearance features are
 actually required. A CNN-LSTM on image crops (DINOv2 `vits14` features into an
-LSTM, with early stopping) reaches **70 % accuracy, 0.71 precision, 0.71 recall**.
+LSTM, with early stopping) reaches **70 % accuracy, 0.71 precision, 0.71 recall**
+on a balanced test split, but a negative control run over a realistic, continuous
+stream shows that result does not hold: the model calls a strike on **46 %** of
+ordinary-swimming windows versus **64 %** of real-feeding windows, close to
+indistinguishable from chance. The stage lands as a benchmarked negative result:
+the strike-defining cues are not resolvable from centroid tracks or re-ID-oriented
+crops at this frame rate, which is a data limitation, not a fixable modelling gap.
 </Abstract>
 
 ## Introduction
@@ -43,6 +50,12 @@ Its signal lives in appearance and posture (a brief body vibration or S-bend and
 a mouth gape) rather than in position. The prey is a tiny particle, invisible at
 screen resolution, so there is no visible target to anchor on. The whole event is
 short and easy to miss when the fish is not in sharp focus.
+
+<VideoSrc
+  src="https://pub-cf50a9fd7ca6482399934d07a6940d2a.r2.dev/stage8-fish2-focus-10s.mp4"
+  poster="/aquamind/stages/08-fish2-focus-poster.jpg"
+  caption="Ten seconds from the middle of the food-injection phase, cropped to fish 2 alone (tracker overlay on). Fish 2 covers a wide area of the tank in this window; a strike, when it happens, is a brief interruption to that ordinary swimming, not a separate kind of movement visible from a distance."
+/>
 
 ## Aim
 
@@ -75,8 +88,8 @@ input.
 
 ### Data
 
-The video `IMG_2349.MOV` is the documented feeding-experiment recording, already
-tracked from earlier stages, so `tracks.parquet` and the per-fish crops are reused
+The feeding-experiment recording (`IMG_2349.MOV`; <a href="https://pub-cf50a9fd7ca6482399934d07a6940d2a.r2.dev/stage8-feeding-strike-tracked.mp4" target="_blank" rel="noopener noreferrer">watch the tracked recording ↗</a>) is
+already tracked from earlier stages, so `tracks.parquet` and the per-fish crops are reused
 directly. It has three phases of about two minutes each: a calm baseline, a
 control-injection phase in which tiny sand particles are delivered through the
 same tubing later used for the food (frames 7505 to 14340), and a food-injection
@@ -142,6 +155,19 @@ sequence, with a linear head mapping its final hidden state to strike or no
 strike. Training uses cross-entropy with Adam (learning rate 1e-3, batch size 8)
 for up to 100 epochs.
 
+<FigureSrc
+  src="/aquamind/stages/08-feeding-strike-lstm-forward-pass.svg"
+  alt="Forward pass of the feeding-strike LSTM. 45 per-frame crops (45x3x224x224) pass through a frozen DINOv2 vits14 backbone into a (45, 384) embedding sequence. An unrolled LSTM reads the sequence one frame at a time; its hidden state carries forward at every step, but each intermediate hidden state is discarded, only the final one (64-dim) is kept. A linear head (64 to 2) maps that vector to two logits, and softmax turns them into a strike / no-strike call."
+  caption="The model's forward pass on one window. Every intermediate hidden state is computed then thrown away; only the final one is kept. This same computation is what runs at both training and inference: during training it happens once per window inside a batch of 8, followed by a loss and a backward pass (not shown here); during inference (infer_feeding.py) it happens once per window with no batching required and nothing following it except recording the score."
+/>
+
+At training time, this forward pass runs once per window inside each batch of 8,
+followed by cross-entropy loss and a backward pass (Adam, lr=1e-3), repeated for
+up to 100 epochs, keeping the checkpoint at minimum test loss. At inference time,
+the identical forward pass runs once per window, with no labels and nothing
+after it but recording the score; sliding across a continuous video is a
+separate, outer loop wrapped around this same computation, not a different model.
+
 ### Evaluation
 
 Both models are scored on the same held-out 20 percent test split, which is
@@ -183,29 +209,39 @@ strikes per fish, more than the same fish produce during the actual feeding
 phase (15, 16, 13, 12), against a ground truth there of 6, 10, 7 and 15. The 70
 percent accuracy figure is real; it was measured on the wrong population.
 
-Five further, independent checks converge on the same conclusion:
+Four further checks, from the same investigation, converge on the same
+conclusion:
 
 | Approach | Reads | Result |
 |---|---|---|
-| Summary kinematics (mean/max speed, burst) | amplitude | ~61% |
-| Optical-flow motion features | motion field | ~61%, flat feature importances |
 | Raw per-frame speed profile, peak-aligned | shape (visual) | no separation by eye |
+| Optical-flow motion features | motion field | ~61%, flat feature importances |
 | ROCKET, 1200 random convolutional kernels | shape / rhythm | ~52%, chance |
 | KMeans / HDBSCAN on behaviour-feature windows | structure | feeding-aggregation cluster found; no strike cluster |
 
-Two of these close off the most obvious follow-up questions. ROCKET was tested
-on the identical balanced, curated distribution the LSTM was trained and
-scored on, not on the stream, and still landed at chance; that rules out "not
-enough negative diversity" as the explanation, since a dedicated shape
-classifier found nothing to separate even given a fair shot at the same
-population the appearance model succeeded on. Separately, the LSTM's own
-decision-threshold sweep, recorded before the negative control was ever run,
-already carried a warning: raising the classification threshold from 0.5 to
-0.6 to 0.7 made precision, recall and accuracy all worse at once, with 0.5
-winning outright. A model with real class separation trades recall for
-precision as the threshold rises, keeping only its most confident calls. This
-one had no such structure to isolate, because its output probabilities were
-never meaningfully separated in the first place, the same fact the stream test
+The first is simple enough to stand on its own regardless of who wrote the
+plotting code: two distributions overlapping almost completely, visible
+directly in a plot. The other three (optical flow, ROCKET, clustering) are
+exploratory checks from the same investigation, not part of this project's
+kept pipeline, and not something I can currently defend past the summary
+here; the full implementation is in `diary.md`, cited for the finding, not
+claimed as owned work in this writeup.
+
+One of them is still worth citing for what it rules out, even secondhand:
+ROCKET was tested on the identical balanced, curated distribution the LSTM
+was trained and scored on, not on the stream, and still landed at chance;
+that weighs against "not enough negative diversity" as the explanation,
+since a dedicated shape classifier found nothing to separate even given a
+fair shot at the same population the appearance model succeeded on.
+
+Separately, and this one is mine: the LSTM's own decision-threshold sweep,
+recorded before the negative control was ever run, already carried a
+warning. Raising the classification threshold from 0.5 to 0.6 to 0.7 made
+precision, recall and accuracy all worse at once, with 0.5 winning outright.
+A model with real class separation trades recall for precision as the
+threshold rises, keeping only its most confident calls; this one had no such
+structure to isolate, because its output probabilities were never
+meaningfully separated in the first place, the same fact the stream test
 later confirmed directly (0.476 vs 0.598, both close to the 0.5 midpoint).
 
 The backbone-ablation scripts (`vitb14`, ResNet18) remain in the repo as

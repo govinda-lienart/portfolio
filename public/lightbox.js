@@ -35,7 +35,7 @@
     bar.append(out, level, inn, reset);
 
     var close = mkBtn("×", "Close image");
-    close.className = "lightbox-close";
+    close.className = "lightbox-btn lightbox-close";
 
     overlay.append(stage, bar, close);
     document.body.appendChild(overlay);

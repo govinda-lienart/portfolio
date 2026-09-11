@@ -1,0 +1,169 @@
+<svg width="100%" viewBox="0 0 1320 700" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Feeding-strike LSTM — forward pass</title>
+  <desc>One window's forward pass through the feeding-strike model. 45 per-frame crops (45x3x224x224) pass through a frozen DINOv2 vits14 backbone, producing a (45, 384) embedding sequence. An unrolled LSTM (input_size=384, hidden_size=64) reads the sequence one frame at a time, t=1 through t=45; its hidden state carries forward at each step, but every intermediate hidden state is computed and then discarded — only the final hidden state, h45 (64-dim), is kept. A linear classifier head (nn.Linear, 64 to 2) maps that single vector to two logits, and softmax turns them into a strike / no-strike call, shown as green (no strike) or red (feeding strike).</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-anchor: middle; }
+      .title { font-size: 19px; font-weight: 700; fill: #111; }
+      .subtitle { font-size: 13px; fill: #666; }
+      .colhead { font-size: 13.5px; font-weight: 700; letter-spacing: 0.2px; }
+      .lab { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; font-weight: 600; fill: #1a1a1a; }
+      .lab-sm { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; fill: #333; }
+      .desc { font-size: 11.5px; fill: #4a4a4a; }
+      .note-it { font-size: 12.5px; font-style: italic; fill: #8a5a00; }
+      .legend { font-size: 10.5px; fill: #444; text-anchor: start; }
+      .shapeflow { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; fill: #1a1a1a; }
+    </style>
+  </defs>
+
+  <text class="title" x="660" y="30">Feeding-strike LSTM — forward pass</text>
+  <text class="subtitle" x="660" y="49">One window → one prediction: 45 frames of 384-dim DINOv2 embeddings in, a strike / no-strike call out.</text>
+
+  <text class="colhead" x="450" y="80" fill="#4a7a3a">LSTM SEQUENCE ENCODING · nn.LSTM(input_size=384, hidden_size=64)</text>
+  <text class="colhead" x="1030" y="80" fill="#8a5a00">CLASSIFIER HEAD · nn.Linear(64, 2)</text>
+  <text class="colhead" x="1230" y="80" fill="#555">OUTPUT</text>
+
+  <text class="note-it" x="450" y="205">h₁, h₂, h₃, … each computed, then discarded — only h₄₅ is kept</text>
+
+  <!-- LSTM cells (unrolled) -->
+  <rect x="205" y="228" width="70" height="60" rx="8" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+  <text class="lab" x="240" y="263">t=1</text>
+  <rect x="315" y="228" width="70" height="60" rx="8" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+  <text class="lab" x="350" y="263">t=2</text>
+  <rect x="425" y="228" width="70" height="60" rx="8" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+  <text class="lab" x="460" y="263">t=3</text>
+  <text x="570" y="266" font-size="20" fill="#555">⋯</text>
+  <rect x="645" y="228" width="70" height="60" rx="8" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+  <text class="lab" x="680" y="263">t=45</text>
+
+  <!-- recurrence arrows -->
+  <g fill="none" stroke="#555" stroke-width="1.5">
+    <line x1="275" y1="258" x2="313" y2="258" marker-end="url(#arrow)"/>
+    <line x1="385" y1="258" x2="423" y2="258" marker-end="url(#arrow)"/>
+    <line x1="495" y1="258" x2="550" y2="258" marker-end="url(#arrow)"/>
+    <line x1="592" y1="258" x2="643" y2="258" marker-end="url(#arrow)"/>
+  </g>
+  <text class="lab-sm" x="294" y="246">h₁</text>
+  <text class="lab-sm" x="618" y="246">h₄₄</text>
+
+  <!-- input embedding row -->
+  <rect x="205" y="380" width="70" height="40" rx="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text class="lab" x="240" y="405">x₁</text>
+  <rect x="315" y="380" width="70" height="40" rx="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text class="lab" x="350" y="405">x₂</text>
+  <rect x="425" y="380" width="70" height="40" rx="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text class="lab" x="460" y="405">x₃</text>
+  <text x="570" y="405" font-size="18" fill="#555">⋯</text>
+  <rect x="645" y="380" width="70" height="40" rx="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text class="lab" x="680" y="405">x₄₅</text>
+
+  <!-- vertical feed arrows -->
+  <g fill="none" stroke="#555" stroke-width="1.5">
+    <line x1="240" y1="380" x2="240" y2="290" marker-end="url(#arrow)"/>
+    <line x1="350" y1="380" x2="350" y2="290" marker-end="url(#arrow)"/>
+    <line x1="460" y1="380" x2="460" y2="290" marker-end="url(#arrow)"/>
+    <line x1="680" y1="380" x2="680" y2="290" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- DINOv2 frozen backbone bar, feeding the whole input row -->
+  <rect x="205" y="440" width="510" height="34" rx="6" fill="#c8dcf0" stroke="#5b84b1" stroke-width="1.5"/>
+  <text class="lab" x="460" y="461">DINOv2 vits14 (❄ frozen backbone)</text>
+  <path d="M205 434 L205 440" stroke="#5b84b1" stroke-width="1.2" fill="none"/>
+  <path d="M715 434 L715 440" stroke="#5b84b1" stroke-width="1.2" fill="none"/>
+  <path d="M205 434 L715 434" stroke="#6c8ebf" stroke-width="1.2" fill="none"/>
+
+  <text class="desc" x="460" y="492">window embedding sequence — (45, 384), one 384-dim vector per frame (cached)</text>
+
+  <!-- crop thumbnails (abstract placeholders, not photos) -->
+  <g>
+    <rect x="205" y="512" width="44" height="34" rx="3" fill="#eee" stroke="#999" stroke-width="1"/>
+    <path d="M209 516 L245 516 M209 542 L245 542" stroke="#bbb" stroke-width="0.8"/>
+    <text class="desc" x="227" y="533" font-size="9">crop 1</text>
+    <rect x="257" y="512" width="44" height="34" rx="3" fill="#eee" stroke="#999" stroke-width="1"/>
+    <path d="M261 516 L297 516 M261 542 L297 542" stroke="#bbb" stroke-width="0.8"/>
+    <text class="desc" x="279" y="533" font-size="9">crop 2</text>
+    <rect x="309" y="512" width="44" height="34" rx="3" fill="#eee" stroke="#999" stroke-width="1"/>
+    <path d="M313 516 L349 516 M313 542 L349 542" stroke="#bbb" stroke-width="0.8"/>
+    <text class="desc" x="331" y="533" font-size="9">crop 3</text>
+    <text x="375" y="534" font-size="16" fill="#555">⋯</text>
+  </g>
+
+  <text class="shapeflow" x="700" y="586">45 crops → DINOv2 (frozen) → (B, 45, 384) → LSTM → (B, 64) → Linear → (B, 2) → softmax → (B, 2) probabilities</text>
+  <text class="desc" x="700" y="605">45 per-frame crops (45 × 3 × 224 × 224)</text>
+
+  <!-- final hidden state box -->
+  <g fill="none" stroke="#555" stroke-width="1.5">
+    <line x1="715" y1="258" x2="758" y2="258" marker-end="url(#arrow)"/>
+  </g>
+  <rect x="760" y="220" width="115" height="76" rx="8" fill="#fff3e0" stroke="#d79b00" stroke-width="2.5"/>
+  <text class="lab" x="817" y="250">h₄₅</text>
+  <text class="lab-sm" x="817" y="268">(64-dim)</text>
+  <text class="desc" x="817" y="284">final hidden state</text>
+
+  <!-- classifier head enclosure -->
+  <rect x="905" y="138" width="255" height="280" rx="10" fill="#fffaf2" stroke="#d79b00" stroke-width="1" stroke-dasharray="5 4"/>
+  <g fill="none" stroke="#555" stroke-width="1.5">
+    <line x1="875" y1="258" x2="920" y2="258" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- left "64-dim vector" nodes -->
+  <circle cx="945" cy="203" r="7" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.3"/>
+  <circle cx="945" cy="231" r="7" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.3"/>
+  <text x="945" y="264" font-size="16" fill="#8a5a00">⋮</text>
+  <circle cx="945" cy="293" r="7" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.3"/>
+  <circle cx="945" cy="321" r="7" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.3"/>
+  <text class="desc" x="945" y="348">64 values</text>
+
+  <!-- right "2 logits" nodes -->
+  <circle cx="1125" cy="226" r="9" fill="#fff" stroke="#d79b00" stroke-width="1.8"/>
+  <circle cx="1125" cy="306" r="9" fill="#fff" stroke="#d79b00" stroke-width="1.8"/>
+  <text class="desc" x="1125" y="340">2 logits</text>
+
+  <!-- fully-connected fan -->
+  <g stroke="#d79b00" stroke-width="0.8" opacity="0.55">
+    <line x1="952" y1="203" x2="1116" y2="226"/>
+    <line x1="952" y1="203" x2="1116" y2="306"/>
+    <line x1="952" y1="231" x2="1116" y2="226"/>
+    <line x1="952" y1="231" x2="1116" y2="306"/>
+    <line x1="952" y1="293" x2="1116" y2="226"/>
+    <line x1="952" y1="293" x2="1116" y2="306"/>
+    <line x1="952" y1="321" x2="1116" y2="226"/>
+    <line x1="952" y1="321" x2="1116" y2="306"/>
+  </g>
+
+  <!-- softmax + output -->
+  <text class="lab-sm" x="1180" y="182">softmax</text>
+  <g fill="none" stroke="#555" stroke-width="1.5">
+    <line x1="1134" y1="226" x2="1198" y2="202" marker-end="url(#arrow)"/>
+    <line x1="1134" y1="306" x2="1198" y2="330" marker-end="url(#arrow)"/>
+  </g>
+
+  <rect x="1200" y="176" width="115" height="52" rx="26" fill="#e6f4ea" stroke="#4c8c5b" stroke-width="1.8"/>
+  <text class="lab-sm" x="1257" y="198" fill="#2f5d3a">class 0</text>
+  <text class="lab-sm" x="1257" y="214" fill="#2f5d3a">no strike</text>
+
+  <rect x="1200" y="304" width="115" height="52" rx="26" fill="#fbe4e2" stroke="#b3423d" stroke-width="1.8"/>
+  <text class="lab-sm" x="1257" y="326" fill="#7a2a26">class 1</text>
+  <text class="lab-sm" x="1257" y="342">feeding strike</text>
+
+  <!-- legend -->
+  <g>
+    <rect x="40" y="655" width="10" height="10" rx="2" fill="#eee" stroke="#999"/>
+    <text class="legend" x="55" y="663">crop image</text>
+    <rect x="150" y="655" width="10" height="10" rx="2" fill="#c8dcf0" stroke="#5b84b1"/>
+    <text class="legend" x="165" y="663">DINOv2 (❄ frozen)</text>
+    <rect x="300" y="655" width="10" height="10" rx="2" fill="#dae8fc" stroke="#6c8ebf"/>
+    <text class="legend" x="315" y="663">per-frame embedding (cached)</text>
+    <rect x="500" y="655" width="10" height="10" rx="2" fill="#d5e8d4" stroke="#82b366"/>
+    <text class="legend" x="515" y="663">LSTM cell (recurrent)</text>
+    <rect x="660" y="655" width="10" height="10" rx="2" fill="#ffe6cc" stroke="#d79b00"/>
+    <text class="legend" x="675" y="663">trainable / kept state</text>
+    <rect x="830" y="655" width="10" height="10" rx="2" fill="#e6f4ea" stroke="#4c8c5b"/>
+    <text class="legend" x="845" y="663">predicted: no strike</text>
+    <rect x="1010" y="655" width="10" height="10" rx="2" fill="#fbe4e2" stroke="#b3423d"/>
+    <text class="legend" x="1025" y="663">predicted: feeding strike</text>
+  </g>
+</svg>
