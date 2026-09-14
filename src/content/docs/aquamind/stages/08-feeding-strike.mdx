@@ -1,6 +1,6 @@
 ---
 title: "Stage 8 · Feeding-strike detection"
-description: "Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN-LSTM on image crops."
+description: "Feeding-strike detection: classical and deep learning both fail, a simple burst signal still helps"
 ---
 
 import Abstract from '../../../../components/Abstract.astro';
@@ -9,7 +9,7 @@ import FigureSrc from '../../../../components/FigureSrc.astro';
 import VideoSrc from '../../../../components/VideoSrc.astro';
 
 <PaperHeader
-  subtitle="Machine learning for feeding-strike detection, from a geometry-only baseline to a CNN-LSTM on image crops."
+  subtitle="Feeding-strike detection: classical and deep learning both fail, a simple burst signal still helps"
   venue="AquaMind · Stage 8"
   date="September 2026"
   meta="Video: IMG_2349.MOV (4-5 fish, food-injection segment) · 118 labelled strikes"
@@ -20,16 +20,24 @@ A feeding strike is a fast, subtle appearance-and-posture event with no visible
 prey to anchor on, which makes it a harder computer-vision target than the
 spatially "loud" behaviours of earlier stages. This stage tests whether a strike
 can be detected automatically from video, and how far a geometry-only approach
-gets before appearance information is needed. A geometry-only baseline lands near
-chance (~61 % accuracy), which is the evidence that appearance features are
-actually required. A CNN-LSTM on image crops (DINOv2 `vits14` features into an
-LSTM, with early stopping) reaches **70 % accuracy, 0.71 precision, 0.71 recall**
+gets before appearance information is needed. A geometry-only baseline (logistic
+regression, random forest, XGBoost on the same four kinematic features) lands
+at or below chance across all three classifiers (**0.56 / 0.54 / 0.49
+accuracy**), which is the evidence that appearance features are actually
+required. A CNN-LSTM on image crops (DINOv2 `vits14` features into an
+LSTM, with early stopping) reaches **64 % accuracy, 0.66 precision, 0.68 recall**
 on a balanced test split, but a negative control run over a realistic, continuous
 stream shows that result does not hold: the model calls a strike on **46 %** of
 ordinary-swimming windows versus **64 %** of real-feeding windows, close to
-indistinguishable from chance. The stage lands as a benchmarked negative result:
-the strike-defining cues are not resolvable from centroid tracks or re-ID-oriented
-crops at this frame rate, which is a data limitation, not a fixable modelling gap.
+indistinguishable from chance. Both approaches land as a benchmarked negative
+result: the strike-defining cues are not resolvable from centroid tracks or
+re-ID-oriented crops at this frame rate, a data limitation rather than a
+fixable modelling gap. A third, deliberately simpler approach then recovers a
+usable signal from the same tracked data: a group-level burst-rate index,
+built from nothing more than smoothed speed peaks, rises from **2.64** to
+**3.03** to **4.03 events/sec** across baseline, sand control and real feeding,
+and tracks real feeding closely enough on direct visual inspection to work as
+a lab-condition readout where both purpose-built classifiers could not.
 </Abstract>
 
 ## Introduction
@@ -82,8 +90,8 @@ input.
 
 <FigureSrc
   src="/aquamind/stages/08-feeding-strike-pipeline.svg"
-  alt="Stage 8 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives from the sand-injection control segment. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping), reaching 70 percent accuracy on the balanced test split. That trained model then feeds infer_feeding.py, a negative control that runs it as a sliding-window classifier over full sand and food phases of the same recording: it calls a strike on 46 percent of no-food windows versus 64 percent of real-feeding windows, mean P(strike) 0.48 versus 0.60, showing the balanced accuracy figure does not hold on a realistic stream. Accuracy figures are reported in the Results section."
-  caption="Stage 8 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two approaches compared on identical data, a geometry baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; the trained model is then stream-tested by infer_feeding.py, a negative control that lands near chance as well. Performance figures are in Results. Click to zoom."
+  alt="Stage 8 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives from the sand-injection control segment. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping), reaching 64 percent accuracy on the balanced test split. That trained model then feeds infer_feeding.py, a negative control that runs it as a sliding-window classifier over full sand and food phases of the same recording: it calls a strike on 46 percent of no-food windows versus 64 percent of real-feeding windows, mean P(strike) 0.48 versus 0.60, showing the balanced accuracy figure does not hold on a realistic stream. Because neither the geometry baseline nor the CNN-LSTM survives that stream test, an arrow leads from the negative-control result down to a fallback box: render_feeding_burst_overlay.py, a purely descriptive per-fish burst-rate metric compared pooled across the control and feeding phases, with no per-strike claim. Accuracy figures are reported in the Results section."
+  caption="Stage 8 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two approaches compared on identical data, a geometry baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; the trained model is then stream-tested by infer_feeding.py, a negative control that lands near chance as well. Because neither approach survives that test, it falls back to a descriptive burst-rate metric (purple) rather than another classifier. Performance figures are in Results. Click to zoom."
 />
 
 ### Data
@@ -110,8 +118,17 @@ risk there make reliable per-fish attribution unsafe.
 ### Window construction
 
 <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/build_feeding_windows_fixed_window.py" target="_blank" rel="noopener noreferrer"><code>build_feeding_windows_fixed_window.py</code></a> turns each labelled strike into a
-fixed-length window centred on the midpoint of its labelled frame range. A fixed
-length is used rather than each event's real span because a deployed detector sees
+fixed-length window centred on the midpoint of its labelled frame range, the
+frame where the strike itself is visually clearest. A feeding strike, as
+labelled by eye, is an extremely subtle event: a brief shake or vibration of
+the body, sometimes with the mouth visibly opening, and it is frequently
+accompanied by a change of swimming direction right at the strike, as the
+fish turns onto the food. Any one of these three cues (the shake, the mouth,
+the turn) can be the clearest signal in a given case, and none of them is
+reliably visible in every strike, which is part of why the window is centred
+on the labeller's best estimate of that moment rather than on a single
+detectable trigger. A fixed length is used rather than each event's real span
+because a deployed detector sees
 a continuous stream with no event boundaries: a fixed window slides along the
 input directly, while an event-length window would first need a separate stage to
 locate candidate events. The length is set to 45 frames (0.75 s at 60 fps), the
@@ -128,19 +145,37 @@ per event, no frame from a test strike reaches training. Its output, `train_df`
 and `test_df` (one row per window: fish id, frame range, label, split), is the
 single source of truth for window membership everywhere downstream.
 
-### Geometry baseline
+### Approach 1 — Geometry baseline
+
+Speed and burst are used here because they are the only strike cues that
+survive centroid tracking at all. Of the three visual cues described above,
+the body shake is a genuine movement event and so has some chance of showing
+up in a speed trace; the mouth gape does not; the fish is filmed side-on in a
+whole-tank shot, and a strike can happen facing away from or across the
+camera as easily as toward it, so the mouth is frequently too small on
+screen or hidden by the fish's own body and orientation to be usable as a
+tracked geometric feature at all, even before considering resolution. The
+direction change is closer to a heading feature than a speed one, and is not
+included in this baseline; it is the natural next feature to add if this
+approach is revisited (see Discussion).
 
 <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/train_feeding_classifier.py" target="_blank" rel="noopener noreferrer"><code>train_feeding_classifier.py</code></a> reads the window tables and computes four kinematic
 features per window: mean and maximum speed, and mean and maximum burst, where
 burst is the frame-to-frame change in speed. Speed is capped at the 99.9th
 percentile and smoothed with a 5-frame centred rolling mean before burst is
 derived, to suppress single-frame tracker-jitter spikes. The four features feed
-logistic regression, a random forest and XGBoost, all at default settings and
-compared directly. The feature set is deliberately small: the goal is an honest
-floor for what movement alone can do, not a full kinematic model, since the
-appearance model is the focus of the stage.
+three standard classifiers, logistic regression, a random forest and XGBoost,
+left at their library defaults with no hyperparameter tuning and compared
+directly: if a real boundary existed in these features, a plain off-the-shelf
+model should be enough to find it, so a null result here is not explained
+away by "the wrong algorithm." Mean and maximum speed, mean and maximum burst
+are the
+most direct kinematic quantities a fish's tracked position can give: the
+first pair asks how fast it moved, the second how sharply that speed changed,
+and between them they are the natural first features to try before reaching
+for anything more elaborate.
 
-### Appearance model (CNN-LSTM)
+### Approach 2 — Appearance model (CNN-LSTM)
 
 The appearance path is three scripts. <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/build_feeding_crops_fixed_window.py" target="_blank" rel="noopener noreferrer"><code>build_feeding_crops_fixed_window.py</code></a>
 expands each window into 45 ordered per-frame rows, each pointing at that frame's
@@ -158,7 +193,7 @@ for up to 100 epochs.
 <FigureSrc
   src="/aquamind/stages/08-feeding-strike-lstm-forward-pass.svg"
   alt="Forward pass of the feeding-strike LSTM. 45 per-frame crops (45x3x224x224) pass through a frozen DINOv2 vits14 backbone into a (45, 384) embedding sequence. An unrolled LSTM reads the sequence one frame at a time; its hidden state carries forward at every step, but each intermediate hidden state is discarded, only the final one (64-dim) is kept. A linear head (64 to 2) maps that vector to two logits, and softmax turns them into a strike / no-strike call."
-  caption="The model's forward pass on one window. Every intermediate hidden state is computed then thrown away; only the final one is kept. This same computation is what runs at both training and inference: during training it happens once per window inside a batch of 8, followed by a loss and a backward pass (not shown here); during inference (infer_feeding.py) it happens once per window with no batching required and nothing following it except recording the score."
+  caption="The model's forward pass on one window: 45 per-frame crops through a frozen DINOv2 backbone, an unrolled LSTM whose intermediate hidden states are computed then thrown away, and a linear head reading only the final one. What happens before and after this exact computation, at training time and at inference time, is described below."
 />
 
 At training time, this forward pass runs once per window inside each batch of 8,
@@ -168,9 +203,9 @@ the identical forward pass runs once per window, with no labels and nothing
 after it but recording the score; sliding across a continuous video is a
 separate, outer loop wrapped around this same computation, not a different model.
 
-### Evaluation
+### Inference and evaluation
 
-Both models are scored on the same held-out 20 percent test split, which is
+Both models are first scored on the same held-out 20 percent test split, which is
 untouched during feature smoothing, training and checkpoint selection. Accuracy,
 precision and recall are reported for the strike class, where a false positive is
 a window predicted as a strike that was not one. For the CNN-LSTM, training and
@@ -179,18 +214,84 @@ trusting the final-epoch score, since on a dataset this small the training loss
 can keep falling well after the test loss has bottomed out; the model kept for
 reporting is the checkpoint at minimum test loss, not the last epoch.
 
+A separate script, <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/infer_feeding.py" target="_blank" rel="noopener noreferrer"><code>infer_feeding.py</code></a>, evaluates the trained CNN-LSTM a second way. Rather
+than scoring a fixed, curated set of windows, it runs the same forward pass
+shown in Fig 2 as a sliding-window classifier directly over two full segments
+of the same recording, the sand-injection phase and the food-injection phase,
+stepping a 45-frame window forward 20 frames at a time so consecutive windows
+overlap. Any window missing a tracked crop anywhere in its 45 frames is
+dropped; every window that survives is scored independently, with no labels,
+no train/test split and no backpropagation involved, since the model is
+already trained and frozen at this point. This is a direct test of whether the
+balanced-split numbers above hold up once the model is run the way it would
+actually be used: continuously, on ordinary swimming as well as real feeding,
+rather than on a hand-picked 50/50 set.
+
+### Approach 3 — Burst-rate (group-level fallback)
+
+Once Approaches 1 and 2 both failed the stream test above, <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/render_feeding_burst_overlay.py" target="_blank" rel="noopener noreferrer"><code>render_feeding_burst_overlay.py</code></a>
+drops per-fish, per-strike attribution entirely. It reuses the same
+`tracks.parquet` and per-fish speed (smoothed the same way as the geometry
+baseline) to detect bursts as local peaks in speed, then pools burst counts
+across all fish rather than assigning any burst to a specific strike or fish.
+Bursts are compared as a rate (events per second) across three segments of
+the same recording: the calm baseline, the sand-injection control, and the
+real feeding phase. This is a deliberately smaller claim than either
+classifier above: it asks only whether the group's overall burst rate shifts
+with real feeding, not which fish struck or when.
+
+The peak-detection cutoff itself is data-derived rather than picked by eye:
+the 95th percentile of smoothed speed measured during the calm-baseline-plus-
+sand segment, with the food-injection segment excluded from that calculation
+so the effect under study cannot leak into the baseline used to detect it.
+
+<FigureSrc
+  src="/aquamind/stages/08-burst-threshold-histogram.png"
+  alt="Density-normalised histogram of per-frame smoothed speed, control segment (baseline plus sand injection, blue) versus feeding segment (orange), with a dashed red line marking the 95th-percentile burst threshold derived from the control segment alone."
+  caption="Control versus feeding speed distributions (density-normalised so the roughly 2x difference in segment length does not distort the comparison). The two curves overlap heavily through the shared peak, so no single frame is classifiable by speed alone, but feeding sits visibly higher through the tail past the threshold, the population-level signal the burst-rate metric below is built on."
+/>
+
+
 ## Results
+
+Three approaches were tested, in the order the stage was built: a geometry-only
+baseline, the CNN-LSTM appearance model, and, once neither survived a
+realistic stream test, a purely descriptive burst-rate fallback. Each is
+reported here as its own approach, with its own numbers.
+
+### Approach 1 — Geometry baseline
+
+All three classifiers are trained on the same four kinematic features (mean
+speed, maximum speed, mean burst, maximum burst), scored on the strike class,
+on the same held-out 20 percent test split used for every model in this stage
+(balanced roughly 50/50 between labelled strikes and matched negatives).
+Reported separately rather than as one collapsed number, since the point is
+whether *any* classifier can find a usable boundary in these features, not
+which one happens to win:
+
+| Model | Accuracy | Precision (feeding) | Recall (feeding) |
+|---|---|---|---|
+| Logistic regression | 0.56 | 0.55 | 0.80 |
+| Random forest | 0.54 | 0.54 | 0.70 |
+| XGBoost | 0.49 | 0.50 | 0.45 |
+
+All three sit at or below chance-equivalent for a balanced binary split, with
+XGBoost landing exactly at coin-flip accuracy. Logistic regression's higher
+recall alongside near-chance precision is a further sign of a weak, mostly
+linear nudge rather than a real decision boundary: the model is closer to
+calling "feeding" more often than to actually separating the classes. This is
+the expected result, not a failure: it is the evidence that a feeding strike
+has too little geometric signature for movement alone, and that appearance
+information is needed.
+
+### Approach 2 — CNN-LSTM (appearance)
 
 | Model | Accuracy | Precision | Recall |
 |---|---|---|---|
-| Geometry-only baseline | ~0.61 | | |
-| CNN-LSTM, fixed 45-frame window | ~0.64 | | |
-| CNN-LSTM, whole-event (epoch-22 checkpoint) | 0.70 | 0.71 | 0.71 |
+| CNN-LSTM, fixed 45-frame window | ~0.64 | 0.66 | 0.68 |
 
-These numbers come from the held-out 20 percent test split described above, a
-set balanced roughly 50/50 between labelled strikes and matched negatives. On
-that split the whole-event CNN-LSTM looks like a working detector. It is not
-one.
+On the balanced test split the CNN-LSTM looks like it might be a working
+detector. It is not one.
 
 A negative control makes this concrete. <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/infer_feeding.py" target="_blank" rel="noopener noreferrer"><code>infer_feeding.py</code></a> runs the trained model as a
 sliding-window classifier over two full segments of the same recording: the
@@ -203,40 +304,13 @@ zero for every fish, and the food-injection phase, where real feeding happens.
 | Real feeding | 587 / 917 | 64.0% | 0.598 |
 
 The model calls a strike on nearly half the windows drawn from ordinary
-swimming with no food present, against a true count of zero. Debounced into
-discrete events, the no-food segment produces 20, 13, 18 and 18 predicted
-strikes per fish, more than the same fish produce during the actual feeding
-phase (15, 16, 13, 12), against a ground truth there of 6, 10, 7 and 15. The 70
-percent accuracy figure is real; it was measured on the wrong population.
+swimming with no food present, against a true count of zero, and on 64
+percent of windows during real feeding, only 18 points higher. The 64 percent
+balanced-split accuracy figure is real; it was measured on the wrong
+population.
 
-Four further checks, from the same investigation, converge on the same
-conclusion:
-
-| Approach | Reads | Result |
-|---|---|---|
-| Raw per-frame speed profile, peak-aligned | shape (visual) | no separation by eye |
-| Optical-flow motion features | motion field | ~61%, flat feature importances |
-| ROCKET, 1200 random convolutional kernels | shape / rhythm | ~52%, chance |
-| KMeans / HDBSCAN on behaviour-feature windows | structure | feeding-aggregation cluster found; no strike cluster |
-
-The first is simple enough to stand on its own regardless of who wrote the
-plotting code: two distributions overlapping almost completely, visible
-directly in a plot. The other three (optical flow, ROCKET, clustering) are
-exploratory checks from the same investigation, not part of this project's
-kept pipeline, and not something I can currently defend past the summary
-here; the full implementation is in `diary.md`, cited for the finding, not
-claimed as owned work in this writeup.
-
-One of them is still worth citing for what it rules out, even secondhand:
-ROCKET was tested on the identical balanced, curated distribution the LSTM
-was trained and scored on, not on the stream, and still landed at chance;
-that weighs against "not enough negative diversity" as the explanation,
-since a dedicated shape classifier found nothing to separate even given a
-fair shot at the same population the appearance model succeeded on.
-
-Separately, and this one is mine: the LSTM's own decision-threshold sweep,
-recorded before the negative control was ever run, already carried a
-warning. Raising the classification threshold from 0.5 to 0.6 to 0.7 made
+The LSTM's own decision-threshold sweep, recorded before the negative control
+was ever run, already carried a warning. Raising the classification threshold from 0.5 to 0.6 to 0.7 made
 precision, recall and accuracy all worse at once, with 0.5 winning outright.
 A model with real class separation trades recall for precision as the
 threshold rises, keeping only its most confident calls; this one had no such
@@ -244,51 +318,135 @@ structure to isolate, because its output probabilities were never
 meaningfully separated in the first place, the same fact the stream test
 later confirmed directly (0.476 vs 0.598, both close to the 0.5 midpoint).
 
-The backbone-ablation scripts (`vitb14`, ResNet18) remain in the repo as
-documented comparison points; neither changes the conclusion above.
+### Approach 3 — Burst-rate (group-level fallback)
+
+Neither the geometry baseline nor the CNN-LSTM survives a realistic stream, so
+the last approach drops per-fish, per-strike attribution altogether and asks a
+smaller, honest question instead: does a fish's burst rate change between
+control and feeding at the group level? <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/render_feeding_burst_overlay.py" target="_blank" rel="noopener noreferrer"><code>render_feeding_burst_overlay.py</code></a> counts speed
+peaks (bursts) per fish from the same tracked recording, pooled across all
+fish, with no attempt to say which fish struck or when.
+
+| Segment | Pooled burst rate (events/sec) |
+|---|---|
+| Baseline (no injection) | 2.64 |
+| Control injection (sand) | 3.03 |
+| Real feeding | 4.03 |
+
+Burst rate rises 1.5x from baseline to real feeding, concentrated at the food
+injection rather than the injection event itself (the sand-injection control
+only accounts for a small part of the increase). It does not need to solve the
+per-strike attribution problem the previous two tests failed at, since it
+never claims to say which fish struck or when; it is a legitimate before/after
+readout for the alarm-cue assay, and the closest thing to a working
+deliverable this stage produced.
 
 ## Discussion
 
-The headline of this stage is not the 70 percent, and it is not a working
-detector. It is that a single balanced-accuracy figure, however carefully
-validated against overfitting, was not sufficient evidence that the model
-worked, and a negative control against a realistic stream overturned it.
+A model that flags a strike on nearly half of all ordinary swimming is not a
+slightly-off detector. It is not a detector at all, and that is the real
+headline of this stage, not the 64 percent balanced-accuracy score that
+looked like a working result until it met a realistic stream instead of a
+curated 50/50 split. The same trained model called a strike on 46 percent of
+ordinary-swimming windows, true count zero, barely below its 64 percent hit
+rate on windows that actually held one. A number that confident and that
+wrong is not a tuning problem, it traces to what the data can carry, not to
+the model or the pipeline. A zebrafish strike is defined by a mouth gape and
+eye convergence, at a scale specialist studies (Shamur et al. 2016, filming
+at 240 fps with head-orientation normalisation) still cap around 73 percent
+accuracy for. At 60 fps, whole-tank, working from centroid tracks and
+re-ID-oriented crops, neither cue is resolvable, confirmed directly on a
+labelled clip where the fish's centroid barely moves during a strike, since
+the event is a head snap rather than a translation.
 
-The failure traces to what the data can carry, not to the model or the
-pipeline. A zebrafish strike is defined by a mouth gape and eye convergence,
-at a scale and speed that specialist studies (Harel et al. 2016, filming at
-240 fps with head-orientation normalisation) still cap around 73 percent
-accuracy for slow feeders. At 60 fps, whole-tank, working from centroid tracks
-and re-ID-oriented crops, neither cue is resolvable. Confirmed directly on a
-10-second labelled clip: the fish's centroid barely moves during a strike,
-since the event is a head snap rather than a translation, so position-based
-tracking is close to blind to it by construction.
+Studies that do recover gape and posture at this level of detail, such as
+Mearns et al. (2020), classify capture bouts from tail-posture and
+timing-to-max-gape measurements extracted at a level of kinematic detail this
+whole-tank, 60 fps setup was never built to capture. The plausible mechanism
+is that a strike this brief and this small on screen leaves little trace once
+compressed into a bounding-box crop and an embedding, though this pipeline
+did not isolate that mechanism directly, only its consequence. More labelled
+data would not fix it either way: both approaches failed from a ceiling on
+what the features themselves carry, not from too few examples, so what would
+actually help is different data, a higher frame rate and a jaw or head
+keypoint, not more labels from the same recording. Phase G (an overlay,
+per-fish counters, an automated report) is dropped accordingly; there is
+nothing trustworthy to visualise from either classifier, and the chasing
+classifier from the previous stage remains this project's working behaviour
+detector.
 
-This also rules out the standard fix. More labelled data would not help,
-because the checks above did not fail for lack of examples; they converged on
-the same ceiling from summary statistics, motion fields, raw shape, a
-dedicated shape classifier and unsupervised structure alike. When independent
-methods with different assumptions all land in the same place, the limit is
-the information available in the features, not the sample count. What would
-fix it is different data: a higher frame rate and a jaw or head keypoint to
-measure gape directly, not more labels from the same recording.
+The clearest surprise of this stage sits outside the classifiers entirely.
+Watching the burst-rate index (Approach 3) directly against the video by eye,
+it tracks real feeding closely: minutes with visibly more fast movement are,
+on inspection, minutes where fish are actually striking, closer than either
+learned model ever managed on its own test split. The likely reason is the
+same failure seen from the other side. The CNN-LSTM was asked to learn a cue
+that is not present in its inputs at this resolution, so its output
+probabilities sit near 0.5 and flicker close to at random, while peak
+detection on smoothed speed asks a much smaller, answerable question, not "is
+this fish gaping at prey" but "is this fish moving unusually fast right now."
+Complexity did not help here because the extra capacity had nothing extra to
+learn from, and the simplest tool in the stage ended up reading the behaviour
+best.
 
-One result survives at the group level. A pooled burst-rate index, counting
-speed peaks across all fish without attempting per-fish attribution, rises
-from 2.64 per second at baseline to 3.03 during the control injection to 4.03
-during real feeding, a 1.5x increase concentrated at the food injection. It
-does not need to solve the per-strike attribution problem this stage failed
-at, since it never claims to say which fish struck or when; it is a legitimate
-before/after readout for the alarm-cue assay, the closest thing to a working
-deliverable this stage produced.
+The match is not unconditional: as food is consumed and becomes scarce,
+bursts blend back into ordinary locomotor activity and can no longer be told
+apart from a fast turn on their own. Read that decline as a feature rather
+than a flaw and the metric is doing something biologically sensible, tracking
+perceived prey availability rather than strikes directly, which is exactly
+the behaviour a foraging fish should show as a patch depletes. What survives
+for measurement is the trend around a known injection point, not the
+individual event, a strong lab-condition tool rather than a general in-vivo
+one. That trend is still only as trustworthy as the cutoff used to call a
+speed peak a burst in the first place, and the control and feeding
+distributions overlap enough that no single frame gives away which condition
+it came from; somewhere past their shared peak, in the population of frames
+rare rather than typical, the two curves finally pull apart.
 
-Phase G (an overlay, per-fish counters, an automated report) is dropped for
-this stage. There is nothing trustworthy to visualise, and building a display
-for it would misrepresent what the model reliably does. The chasing
-classifier in the previous stage remains the working behaviour detector in
-this project; this stage stands as a negative result, benchmarked and
-understood rather than an open question.
+The threshold used here is the 95th percentile of speed from the
+calm-baseline-plus-sand segment, with the food-injection segment excluded
+from that calculation on purpose. The exclusion matters more than the
+percentile: fold feeding speeds into the same calculation and a real speed
+increase from feeding raises the very bar feeding then has to clear, so a
+strong effect would make itself harder to see, not easier. Someone has
+already tried removing that kind of arbitrariness altogether. Wang,
+Kroeschell, Zhu, Mumm and Yi (bioRxiv, 2026) train a CNN-BiLSTM on hand
+labelled tail kinematics to detect swim bouts in tethered larval zebrafish
+with no cutoff at all. Their own numbers mark where that effort earns its
+keep: on high-amplitude bouts the learned model ties a plain threshold, 97.7
+against 98.0 percent accuracy, and only pulls ahead on subtle, low-amplitude
+events, where precision climbs from 67 to 89 percent. A feeding-driven burst
+is the large, high-amplitude case their results already call solved without a
+model, which is why a percentile threshold, not a learned one, was kept here.
+
+What that threshold cannot do yet is travel. Run this same calibration on a
+different day, tank, or the same fish a month later, and each one quietly
+recomputes its own cutoff, blind to every other session, so a genuine rise in
+baseline activity across a study would vanish into a moving target rather
+than showing up against a fixed one. The fix costs nothing extra: pool
+control-segment speed across every session or tank first, take the
+percentile once, and hold it fixed for the rest of the study, a number that
+means the same thing on day one and day thirty, tank A and tank B, before
+anyone outside a single recording has reason to trust it. That is the
+natural next step for per-strike detection too, treated as still open rather
+than closed: a movement-based feature set richer than raw speed, closer to
+the bearing and lagged path-following features already scoped for the
+chasing classifier in Stage 7, combined with the burst signal and its pooled
+threshold, is a more promising direction than a bigger appearance model on
+the same crops. None of that is built or claimed here; it is the concrete
+direction this negative result points toward, needing considerably more
+labelled sessions and cross-tank testing before any of it could be trusted.
 
 ## References
 
-Cited literature and tools to be added.
+Shamur, E., Zilka, M., Hassner, T., China, V., Liberzon, A., & Holzman, R.
+(2016). Automated detection of feeding strikes by larval fish using
+continuous high-speed digital video: a novel method to extract quantitative
+data from fast, sparse kinematic events. <a href="https://journals.biologists.com/jeb/article/219/11/1608/15185/Automated-detection-of-feeding-strikes-by-larval" target="_blank" rel="noopener noreferrer"><em>Journal of Experimental Biology</em>, 219(11), 1608-1617</a>.
+
+Wang, H., Kroeschell, G., Zhu, Y., Mumm, J. S., & Yi, J. (2026). Threshold-free
+neural network models for swim bout detection of larval zebrafish. <a href="https://doi.org/10.64898/2026.01.11.698899" target="_blank" rel="noopener noreferrer"><em>bioRxiv</em></a>.
+
+Mearns, D. S., Donovan, J. C., Fernandes, A. M., Semmelhack, J. L., & Baier,
+H. (2020). Deconstructing hunting behavior reveals a tightly coupled
+stimulus-response loop. <a href="https://doi.org/10.1016/j.cub.2019.11.022" target="_blank" rel="noopener noreferrer"><em>Current Biology</em>, 30(1), 54-69</a>.
