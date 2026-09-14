@@ -3,6 +3,7 @@ title: Stage 1 · Frame extraction and MySQL storage
 description: Turning raw aquarium video into a structured, frame-level dataset with persistent metadata.
 ---
 
+import Abstract from '../../../../components/Abstract.astro';
 import Figure from '../../../../components/Figure.astro';
 import PaperHeader from '../../../../components/PaperHeader.astro';
 import hevcFaded from '../../../../assets/aquamind/stage-01/hevc-faded.png';
@@ -14,6 +15,20 @@ import sqlVerify from '../../../../assets/aquamind/stage-01/sql-verify.png';
   venue="AquaMind · Stage 1"
   meta="Videos: IMG_*.MOV · OpenCV · MySQL 8.4 (Docker) · 1 frame/sec"
 />
+
+<Abstract>
+Stage 1 converts raw aquarium video into a structured, frame-level dataset:
+continuous footage is sampled at one frame per second, and both the image files
+and their metadata are stored persistently, in MySQL, so later stages can
+reference a specific frame instead of re-decoding video. An early colour-fidelity
+bug traced to iPhone HEVC encoding was fixed by switching the recording codec, not
+by patching the decoder. The result is a reproducible ingestion layer: consistent
+1 FPS sampling, lossless PNG frames on disk, and structured metadata in a
+Dockerised MySQL database, forming the foundation the annotation and training
+stages build on.
+</Abstract>
+
+## Introduction
 
 Stage 1 implements the initial ingestion layer of the AquaMind pipeline,
 transforming raw aquarium video footage into a structured, frame-level dataset
@@ -28,7 +43,15 @@ construction for model training.
 Video → Frame sampling → Persistent storage (disk + MySQL) → ML dataset
 ```
 
-## System prerequisites
+## Aim
+
+Turn continuous video into a frame-indexed dataset that later stages (annotation,
+dataset construction, tracking) can reference by frame number and timestamp,
+rather than re-decoding the source video every time — and do it in a way that
+survives a codec quirk in the raw recordings without silently degrading image
+quality.
+
+## Methods
 
 ### Environment setup
 
@@ -47,8 +70,6 @@ Core dependencies:
 - `opencv-python`: video decoding and frame extraction
 - `mysql-connector-python`: relational database connectivity
 - `os`, `datetime`: standard-library modules for filesystem and timestamp management
-
-## Data-acquisition considerations
 
 ### Video-encoding constraints
 
@@ -74,9 +95,7 @@ extraction.
 Recordings were standardised at 60 FPS to increase temporal resolution, enabling
 finer capture of fast behavioural events such as feeding strikes.
 
-## Infrastructure setup
-
-### Database deployment
+### Infrastructure setup
 
 A MySQL 8.4 instance was deployed inside a Docker container to ensure environment
 isolation and avoid conflicts with local database installations. Port 3306 is
@@ -101,7 +120,7 @@ SHOW TABLES;
 DESCRIBE frames;
 ```
 
-## Database schema
+### Database schema
 
 Frame-level metadata is stored in a single relational table designed for
 traceability and downstream dataset reconstruction. Each frame can be traced back
@@ -119,42 +138,34 @@ CREATE TABLE frames (
 );
 ```
 
-## Frame-extraction pipeline
+### Frame-extraction pipeline
 
 [View source on GitHub](https://github.com/govinda-lienart/AquaMind/blob/main/extract_frames.py)
 
-### Design overview
+**Design overview.** The pipeline reads video files sequentially using OpenCV and
+extracts frames at a fixed rate of one frame per second. Each extracted frame is
+saved both as an image file and as a structured record in a MySQL database.
 
-The pipeline reads video files sequentially using OpenCV and extracts frames at a
-fixed rate of one frame per second. Each extracted frame is saved both as an image
-file and as a structured record in a MySQL database.
+**Frame-rate normalisation.** The frame rate of each video is retrieved directly
+using OpenCV. However, iPhone recordings give a frame rate of `59.94` FPS instead
+of a clean `60` FPS due to underlying NTSC video-encoding standards. If used
+directly, this small discrepancy causes `frame_count % fps == 0` to select frames
+inconsistently. The FPS value is wrapped in `round()` to normalise it to the
+nearest integer before being used in the sampling logic.
 
-### Frame-rate normalisation
+**Sampling strategy.** Frames are selected using the expression
+`frame_count % fps == 0`, which ensures that exactly one frame per second is
+extracted. The video is read frame by frame using OpenCV, which returns a boolean
+`ret` and the `frame` image data on each call. When `ret` becomes `False`, the
+video has reached its end and the loop terminates.
 
-The frame rate of each video is retrieved directly using OpenCV. However, iPhone
-recordings give a frame rate of `59.94` FPS instead of a clean `60` FPS due to
-underlying NTSC video-encoding standards. If used directly, this small discrepancy
-causes `frame_count % fps == 0` to select frames inconsistently. The FPS value is
-wrapped in `round()` to normalise it to the nearest integer before being used in
-the sampling logic.
+**Frame storage.** Each selected frame is saved as a PNG image to preserve full
+image quality without compression loss. This matters because the dataset is
+intended for future annotation and machine-learning tasks where pixel-level
+accuracy counts. For every frame the system records its index and computes its
+timestamp in seconds relative to the start of the video using `frame_count / fps`.
 
-### Sampling strategy
-
-Frames are selected using the expression `frame_count % fps == 0`, which ensures
-that exactly one frame per second is extracted. The video is read frame by frame
-using OpenCV, which returns a boolean `ret` and the `frame` image data on each
-call. When `ret` becomes `False`, the video has reached its end and the loop
-terminates.
-
-### Frame storage
-
-Each selected frame is saved as a PNG image to preserve full image quality without
-compression loss. This matters because the dataset is intended for future annotation
-and machine-learning tasks where pixel-level accuracy counts. For every frame the
-system records its index and computes its timestamp in seconds relative to the
-start of the video using `frame_count / fps`.
-
-## Validation
+## Results
 
 Correctness of ingestion is verified via:
 
@@ -169,7 +180,7 @@ filesystem.
 
 <Figure src={sqlVerify} alt="Verification SQL table structure and inserts" caption="Verification of SQL table structure and inserts." width={700} />
 
-## Outcome
+## Discussion
 
 Stage 1 establishes a reproducible ingestion pipeline that converts raw aquarium
 video into a structured frame dataset with persistent metadata tracking:

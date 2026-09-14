@@ -1,0 +1,122 @@
+---
+title: "Stage 5 · Fish re-identification"
+description: "A learned appearance embedding as a crossing-time swap-auditor, not a live identity-assigner."
+---
+
+import Abstract from '../../../../components/Abstract.astro';
+import PaperHeader from '../../../../components/PaperHeader.astro';
+
+<PaperHeader
+  subtitle="A learned appearance embedding as a crossing-time swap-auditor, not a live identity-assigner."
+  venue="AquaMind · Stage 5"
+  meta="DINOv2 backbone · contrastive head · reliability horizon ~2s"
+/>
+
+<Abstract>
+Stage 5 asks whether a learned appearance embedding (crop → fingerprint vector)
+can hold fish identity through the crossings Stage 4's geometry alone can swap —
+especially for the visually near-identical golden-morph fish where classical
+colour-histogram re-ID fails. Two independent attempts at using appearance as the
+*primary* identity source both failed the same way (an offline whole-video
+stitcher made ID collisions worse, not better; a live appearance veto caused
+ghost-spirals), which converged on the actual settled design: appearance is
+reliable only briefly after a clean track (a measured **reliability horizon of
+~2s**), so its sound role is a **crossing-time swap auditor**, not a
+identity-assigner. A self-supervised contrastive head still measurably
+consolidates identity (silhouette 0.034 → 0.485 on trusted labels, ~97% local
+kNN accuracy), and the remaining gap traces to single-session data diversity, not
+embedder quality.
+</Abstract>
+
+:::note[Draft — tentative]
+Title and structure are settled; full write-up (figures, exact numbers pulled
+from `diary.md`) is still pending. See the
+[AquaMind repository](https://github.com/govinda-lienart/AquaMind) and
+`diary.md`'s Stage 6 section for the complete reasoning trail this summarises.
+:::
+
+## Introduction
+
+Stage 4's tracker holds identity through most crossings using geometry alone
+(merge-aware coast, velocity freeze). But the golden-morph fish are visually
+close enough that a hard crossing case could still swap two IDs with no
+geometric signal left to catch it. Stage 5 asks whether a *learned* appearance
+embedding — rather than a hand-built colour histogram — can either fix that
+directly or at least flag it.
+
+## Aim
+
+Find the right role for an appearance embedding in the pipeline: test it first as
+a potential *identity-assigner* (can it re-identify a fish on its own,
+independent of geometry?), and if that fails, find where it's still reliable
+enough to be useful in a narrower role.
+
+## Methods
+
+### Data and feature extraction
+
+Per-fish crops come from Stage 4's tracker runs (primarily `IMG_1839.MOV`).
+`reid_features.py` is the shared feature module: a frozen DINOv2 backbone loaded
+once via `torch.hub`, a `FishCropDataset`, and a `build_features()` entry point
+used by every approach below.
+
+### Approach 1 — offline whole-video stitching (rejected)
+
+`stitch_ids.py` builds same-fish tracklets from `tracks.parquet` — the tracker's
+own crossings/occlusions give free candidate labels ("these two segments are
+probably the same fish"). A separate stitcher then tried to use appearance
+similarity to merge tracklets into consistent global identities across the whole
+video.
+
+### Approach 2 — contrastive head (kept)
+
+`contrastive_reid.py` trains a self-supervised contrastive head on the same
+free tracklet labels: same-tracklet crops pulled together in embedding space,
+different-tracklet crops pushed apart. This is the model actually kept in the
+live pipeline.
+
+### Approach 3 — live appearance-as-veto (rejected)
+
+A separate experiment let the appearance embedding veto the tracker's geometric
+match live, frame by frame, whenever the two disagreed.
+
+### Settled integration
+
+`tracker.py` loads the contrastive head as a **cost tie-breaker with a time-gate**:
+appearance only weighs in within its measured reliability window, falling back to
+geometry once that memory goes stale. The actual **auditor** — flagging a
+"possible swap, please check" event for a 5-second human review window around a
+crossing — is designed but **not yet built**; that is the concrete next step if
+this stage resumes.
+
+## Results
+
+- **Local clustering quality:** ~97% kNN accuracy (`reid_quality.py`) and a
+  silhouette-score rise from 0.034 to 0.485 on trusted labels after contrastive
+  training — the embedding clearly organises identity locally.
+- **Reliability horizon:** roughly 95% reliable at ≤1s since last clean sighting,
+  down to ~66% by 18s — the empirical basis for the time-gate above.
+- **Approach 1 (offline stitching):** made things worse, not better — roughly 0%
+  ID collisions in the tracker's own output vs ~17% after stitching.
+- **Approach 3 (live veto):** no clean quantitative metric; qualitatively,
+  produced runaway "ghost-spiral" identity churn during ambiguous stretches.
+
+## Discussion
+
+Two independent failures agreeing on the same lesson is stronger evidence than
+either alone: stitching (a global, offline use of appearance) and live veto (a
+frame-by-frame, online use) both failed, for related reasons — appearance
+similarity decays with time since the last clean sighting, so using it far from
+that anchor point is actively harmful, not just unhelpful.
+
+The remaining gap is **data diversity within a single filming session**, not the
+embedder: a frozen DINOv2 backbone clusters fish well locally (~98% kNN) but
+drifts over a ~2-minute window, confirmed four independent ways (see
+`diary.md`). More training is unlikely to fix this; more visually varied footage
+of the same fish might.
+
+This is the direct evidence base for [Stage 4](/portfolio/aquamind/stages/04-tracker/)'s
+description of appearance fusion as *optional* rather than load-bearing: the
+tracker's own geometry, not appearance, is what actually solves crossings — this
+stage's job is narrower, catching what geometry alone would miss, not replacing
+it.

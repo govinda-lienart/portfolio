@@ -1,0 +1,143 @@
+---
+title: "Stage 6 · Chasing detection"
+description: "Pairwise kinematic features and a TCPA collision-avoidance detector, built up from per-fish metrics to labelled chase events."
+---
+
+import Abstract from '../../../../components/Abstract.astro';
+import PaperHeader from '../../../../components/PaperHeader.astro';
+
+<PaperHeader
+  subtitle="Pairwise kinematic features and a TCPA collision-avoidance detector, built up from per-fish metrics to labelled chase events."
+  venue="AquaMind · Stage 6"
+  meta="TCPA candidate detector · LR/RF/XGBoost baselines · fixed-window & whole-event LSTM"
+/>
+
+<Abstract>
+Stage 6 detects chasing — a core dominance behaviour in the chemical-alarm-cue
+antipredator assay this project is built around — starting from basic per-fish
+kinematics and building up to pairwise features, labelled events, and trained
+classifiers. The key engineering idea is **TCPA (time to closest point of
+approach)**, adapted from maritime and aerospace collision-avoidance math, used
+as a principled candidate-detector before any manual labeling happens. TCPA
+alone over-flagged low-speed drifting pairs (~8.5% of all frames); adding a
+minimum-speed floor on top brought that down to ~2.5%. A known blind spot
+remains: the detector catches the fast initial approach but goes quiet once a
+chase settles into a steady "following" phase — documented as evidence for a
+planned feature, not yet built. *(Classifier performance numbers are pending
+write-up.)*
+</Abstract>
+
+:::note[Draft — tentative]
+Title and structure are settled; full Results (baseline and LSTM performance
+numbers) are still pending write-up. See the
+[AquaMind repository](https://github.com/govinda-lienart/AquaMind) and
+`diary.md`'s Stage 7 section for the complete reasoning trail this summarises.
+:::
+
+## Introduction
+
+Chasing/dominance is one of the behaviours this project's chemical-alarm-cue
+antipredator assay is built to measure — the same kind of behaviour hand-scored
+during the PhD work this project automates. Unlike Stage 5's per-fish tracking
+problem, chasing is inherently **pairwise**: it's defined by the relationship
+between two fish, not by either one's motion alone.
+
+## Aim
+
+Build the chasing detector in deliberate layers rather than jumping straight to
+a classifier: basic per-fish metrics first (as a report layer and a skill-building
+step), then pairwise features grounded in an actual physical model of
+"approach," then labelled events, then baselines, then sequence models —
+following the evidence at each step rather than assuming which features matter.
+
+## Methods
+
+### Phase A — per-fish metrics
+
+`analyse_behaviour.py` computes basic per-fish kinematics with plain Pandas, no
+ML: speed, distance travelled, depth, activity level. This is the report layer
+every later phase builds features on top of.
+
+### Phase B — pairwise features and the TCPA candidate detector
+
+A `pairs` dataframe is built via a self-merge on `frame_number`
+(`fish_id_a < fish_id_b`), the pairwise unit everything below builds on.
+
+- **B1 — distance.** Euclidean distance between the pair, per frame.
+- **B2 — closing speed.** Distance is smoothed with a rolling mean
+  (window = 15 frames, ~250ms) *before* differencing — raw closing speed had
+  tracker-jitter spikes to ±500-700 cm/s, physically impossible for zebrafish.
+- **TCPA (time to closest point of approach)** = distance ÷ closing speed
+  (itself averaged over a ~0.5s window), adapted directly from
+  maritime/aerospace collision-avoidance — the same math used for
+  satellite-conjunction tracking. Low TCPA means "closing fast, about to meet
+  very soon."
+- **Speed floor.** TCPA alone over-flagged near-stationary pairs, since
+  distance can be small even at drifting speed (~8.5% of all frames flagged).
+  Adding a minimum-speed floor (10 cm/s) on top of TCPA dropped that to ~2.5%,
+  organised into distinct clusters rather than solid blocks.
+- **Known blind spot.** This detector catches the fast initial approach but goes
+  quiet once a chase becomes a steady "following" phase (subordinate fish
+  matching pace, distance roughly constant, closing speed near zero) or
+  post-contact path-tracing. This is treated as evidence for a planned feature
+  (lagged path-following), not silently patched around.
+- **Deliberately parked, not built without evidence:** bearing/heading, lagged
+  path-following, individual-fish speed/acceleration asymmetry, chaser/chased
+  role inference — several concrete ways to compute each were scoped but held
+  back pending labeling evidence that they're actually needed.
+
+### Phase C — human-labelled chase events
+
+Chase events are labelled by hand into `chase_labels.xlsx`: `video_name`,
+`fish_id_a`, `fish_id_b`, `start_time_sec`, `end_time_sec`, `outcome`
+(contact / evaded / ambiguous), an untrusted optional `chaser_id`, and free-text
+`notes`. One continuous event per chase, spanning the initial attack burst
+through any following/path-tracing tail — not split into sub-events, to avoid
+adding schema complexity before evidence says it's needed.
+
+### Phase D — training windows
+
+`build_chase_windows.py` builds train/test window parquets from the labelled
+events and the pairwise feature table.
+
+### Phase E — baseline classifiers
+
+`train_chase_classifier.py` trains logistic regression, random forest and
+XGBoost on the same feature set, with config-driven feature toggles. Optimised
+for **chase-class precision over recall** — a deliberate, domain-driven choice:
+a false positive here fabricates evidence in a real scientific assay, which is a
+worse failure than missing a real chase.
+
+### Phase F — sequence models
+
+Two separate LSTM scripts, split out to keep each simple:
+`train_chase_lstm_windowed.py` (fixed-window) and
+`train_chase_lstm_whole_event.py` (whole-event).
+
+## Results
+
+*(Baseline and LSTM precision/recall on the chase class, and the comparison
+between fixed-window and whole-event framing, go here once written up.)*
+
+## Discussion
+
+TCPA is the interesting engineering decision in this stage: rather than pick an
+arbitrary distance or speed threshold, it borrows a physically-grounded
+"time until closest approach" model from a completely different domain
+(collision avoidance), then patches its one failure mode (near-stationary pairs
+collapsing TCPA toward zero) with a minimum-speed floor grounded in what's
+physically plausible for zebrafish.
+
+The documented blind spot — losing the "following" phase once closing speed
+flattens out — is left as an open, evidenced gap rather than papered over, in
+keeping with this project's discipline of only adding a feature once labeling
+evidence justifies it (the same discipline behind parking bearing, path-following
+and role-asymmetry features rather than building them speculatively).
+
+The precision-over-recall choice in Phase E is also worth calling out
+explicitly: it's not a generic classifier default, it's a direct consequence of
+what a false positive costs in this specific scientific context. Phase G
+(overlay, per-fish counters, an automated report) is deliberately built last —
+[Stage 7](/portfolio/aquamind/stages/07-feeding-strike/)'s feeding-strike work already showed that an overlay-level sanity check
+can surface problems balanced-window metrics hide, so the same discipline
+applies here once Results above is filled in.

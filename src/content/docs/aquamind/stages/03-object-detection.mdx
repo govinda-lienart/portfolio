@@ -1,0 +1,93 @@
+---
+title: "Stage 3 · Object detection"
+description: "Building the YOLO dataset from MySQL and fine-tuning a fish detector, tracked in MLflow."
+---
+
+import Abstract from '../../../../components/Abstract.astro';
+import PaperHeader from '../../../../components/PaperHeader.astro';
+
+<PaperHeader
+  subtitle="Building the YOLO dataset from MySQL and fine-tuning a fish detector, tracked in MLflow."
+  venue="AquaMind · Stage 3"
+  meta="prepare_dataset.py · YOLOv8 · MLflow Model Registry"
+/>
+
+<Abstract>
+*What this stage produces in one paragraph: a versioned YOLO dataset pulled from
+MySQL, the fine-tuned detector trained on it, and its registration in the MLflow
+Model Registry — headline numbers (mAP, dataset size, train/val split) once
+measured.*
+</Abstract>
+
+:::note[Draft — skeleton]
+Structure only. See the [AquaMind repository](https://github.com/govinda-lienart/AquaMind)
+for the current code and `diary.md` for the full reasoning trail.
+:::
+
+## Introduction
+
+*Why a dataset needs to be built from MySQL rather than used as flat files
+(traceability, reproducibility, the ability to re-run `prepare_dataset.py` against
+a different set of `annotation_set_ids` without re-touching raw frames). Where
+this sits in the pipeline: consumes Stage 2's `annotations` table, produces the
+detector Stage 4 depends on.*
+
+## Aim
+
+*State the two things this stage sets out to do: (1) turn annotated MySQL rows
+into a YOLO-format dataset folder with a reproducible train/val split, (2)
+fine-tune YOLOv8 on that dataset and register the result so later stages resolve
+it by name/alias instead of a hardcoded path.*
+
+## Methods
+
+### Dataset construction — `prepare_dataset.py`
+
+*Query annotated frames from MySQL, 80/20 train/val split, folder layout written
+to `dataset/{name}/`, `dataset_card.yaml` (counts, annotation_set_ids, git
+commit for reproducibility), `dataset.yaml` for YOLO.*
+
+### YOLOv8 fine-tuning
+
+*Base model, training config (epochs, image size, augmentation if any), hardware
+used, what changed between iterations if there were several dataset/training
+rounds.*
+
+### MLflow tracking and Model Registry — `log_artifact_mlflow.py`
+
+*Logging the run to MLflow, registering `best.pt` under `aquamind-yolo-detector`,
+moving the `@champion` alias. Why registry over a hardcoded `config.yaml` path
+(promotion = re-run the script). Two-backend note: SQLite registry vs file-based
+`mlruns/` for other experiments.*
+
+### Classes
+
+*0 = `danio_rerio`, 1 = `reflection` — why reflections are a separate class
+rather than filtered out (helps the model learn to ignore them rather than
+never seeing them).*
+
+*(Once trained, this stage's `@champion` model is also used back in
+[Stage 2](/portfolio/aquamind/stages/02-annotation/) to auto-label new frames —
+see that stage's "Auto-labeling" section.)*
+
+## Results
+
+### Dataset construction
+
+*Final dataset size (train/val counts), class balance, any frame-source mix
+(regular vs crossing-event frames from Stage 4's hard-negative mining loop, once
+that closes the loop back into this stage).*
+
+### Detector performance
+
+*mAP50 / mAP50-95, precision/recall per class, confusion between `danio_rerio` and
+`reflection` if any, comparison across model versions logged in the registry
+(e.g. the v3 champion referenced in later stages).*
+
+## Discussion
+
+Honest read of where the detector is strong (clean single-fish frames) and where
+it struggles (the crossing/merge case that motivates Stage 4's tracker-side
+handling and evaluation) — the same "fix is in the labels" thread that
+Stage 4 concludes with. What would improve mAP further if pursued (more crossing
+frames via the hard-negative loop, more morph diversity).

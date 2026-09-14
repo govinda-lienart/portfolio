@@ -3,6 +3,7 @@ title: "Stage 2 · Label and store annotations in MySQL"
 description: "Hand-labelling every visible fish with bounding boxes, exporting YOLO format, and storing each box as a relational record."
 ---
 
+import Abstract from '../../../../components/Abstract.astro';
 import FigureSrc from '../../../../components/FigureSrc.astro';
 import PaperHeader from '../../../../components/PaperHeader.astro';
 
@@ -11,6 +12,17 @@ import PaperHeader from '../../../../components/PaperHeader.astro';
   venue="AquaMind · Stage 2"
   meta="Label Studio (Docker) · YOLO export · 366 boxes / 61 frames · MySQL"
 />
+
+<Abstract>
+Stage 2 turns the frame dataset from Stage 1 into a supervised-learning dataset
+by hand-labelling every visible fish with a bounding box in Label Studio,
+exporting the result in YOLO format, and parsing each box into a relational
+`annotations` table keyed back to its source frame. 366 bounding boxes were
+labelled across 61 frames. This is the labelled-data layer the detector is
+trained on in Stage 3.
+</Abstract>
+
+## Introduction
 
 Stage 2 implements the annotation layer of the AquaMind pipeline, where each
 extracted frame from Stage 1 is manually labelled by drawing bounding boxes around
@@ -26,7 +38,14 @@ YOLO format for model training.
 Video → Frames → Annotations → Database → AI model
 ```
 
-## System prerequisites
+## Aim
+
+Produce a labelled dataset a detector can train on: every visible fish boxed by
+hand, exported in a training-ready format (YOLO), and stored as relational rows
+that trace back to their source frame — so annotation coverage, provenance and
+later re-labelling are all queryable rather than living only in flat files.
+
+## Methods
 
 ### Environment setup
 
@@ -34,24 +53,20 @@ The same `aquamind` Conda environment from Stage 1 is used. No additional Python
 packages are required; `mysql-connector-python`, `os` and `datetime` are already
 installed.
 
-### Labelling tool
+### Labelling infrastructure
 
 Label Studio is used for manual annotation and is launched as a Docker container.
-No local installation is required beyond Docker Desktop being active.
-
-## Environment and infrastructure setup
-
-Label Studio is launched as a single Docker container using the
-`heartexlabs/label-studio:latest` image. Port 8080 is mapped to the host, and a
-volume mount gives Label Studio persistent storage: all annotation data is
-written to the local `mydata` folder on the host rather than inside the container,
-so the work survives a container restart.
+No local installation is required beyond Docker Desktop being active. It runs as a
+single container using the `heartexlabs/label-studio:latest` image. Port 8080 is
+mapped to the host, and a volume mount gives Label Studio persistent storage: all
+annotation data is written to the local `mydata` folder on the host rather than
+inside the container, so the work survives a container restart.
 
 ```bash
 docker run -it -p 8080:8080 -v $(pwd)/mydata:/label-studio/data heartexlabs/label-studio:latest
 ```
 
-## Annotation
+### Annotation
 
 Inside Label Studio, a new project named *AquaMind* is created. The labelling
 interface is configured under Settings → Labelling Interface: the Computer Vision
@@ -62,7 +77,7 @@ individual tasks.
 Each frame is opened individually and a bounding box is drawn around every visible
 fish, one box per fish.
 
-## YOLO export
+### YOLO export
 
 Once all frames are annotated, the project is exported in *YOLO with Images*
 format. The archive contains:
@@ -91,7 +106,7 @@ This line represents one fish: class 0 (`danio_rerio_golden`).
 
 <FigureSrc src="/aquamind/yolo-bbox-explainer.svg" alt="YOLO bounding-box coordinate diagram" caption="YOLO coordinate system: all values normalised between 0 and 1." />
 
-## Database schema
+### Database schema
 
 Before storing annotations, the `annotations` table is created with a foreign key
 linking each record back to its frame in the `frames` table.
@@ -111,22 +126,18 @@ CREATE TABLE annotations (
 );
 ```
 
-## Annotation-storage pipeline
+### Annotation-storage pipeline
 
 [View source on GitHub](https://github.com/govinda-lienart/AquaMind/blob/main/store_annotations.py)
 
-### Design overview
+**Design overview.** The script iterates over every `.txt` file in the exported
+`labels/` folder. For each file the frame number is parsed from the filename,
+used to retrieve the `frame_id` from the `frames` table, and each bounding box is
+inserted as a record into `annotations`.
 
-The script iterates over every `.txt` file in the exported `labels/` folder. For
-each file the frame number is parsed from the filename, used to retrieve the
-`frame_id` from the `frames` table, and each bounding box is inserted as a record
-into `annotations`.
-
-### Filename parsing and frame-ID lookup
-
-Label Studio exports annotation files with a hash prefix followed by the frame
-name (e.g. `e6d83681-frame_360.txt`). The frame number is parsed from the filename
-and used to query the `frames` table:
+**Filename parsing and frame-ID lookup.** Label Studio exports annotation files
+with a hash prefix followed by the frame name (e.g. `e6d83681-frame_360.txt`). The
+frame number is parsed from the filename and used to query the `frames` table:
 
 ```sql
 SELECT id FROM frames WHERE frame_number = %s
@@ -136,13 +147,12 @@ SELECT id FROM frames WHERE frame_number = %s
 inserting into `annotations`. This lookup ensures every annotation is linked to the
 correct source frame regardless of file ordering.
 
-### Reading and casting bounding-box values
+**Reading and casting bounding-box values.** Each line represents one bounding
+box. The five whitespace-separated values are read and cast (`class_id` to `int`,
+the four coordinates to `float`) so they are stored with the correct types in
+MySQL.
 
-Each line represents one bounding box. The five whitespace-separated values are
-read and cast (`class_id` to `int`, the four coordinates to `float`) so they are
-stored with the correct types in MySQL.
-
-### Inserting into MySQL
+**Inserting into MySQL.**
 
 ```sql
 INSERT INTO annotations (frame_id, class_id, label, x_center, y_center, width, height, created_at)
@@ -153,7 +163,21 @@ The `label` field is set to `danio_rerio_golden` and `created_at` is generated a
 insertion time with `datetime.datetime.now()`. Once all files are processed,
 `conn.commit()` saves the rows and `conn.close()` frees the connection.
 
-## Validation
+### Auto-labeling — model-assisted labeling
+
+*Once Stage 3 has a trained `@champion` detector, a small Label Studio ML
+backend (a server implementing `predict()`, loading the model via
+`model_registry.py`'s `load_yolo()` — the same resolver `tracker.py` uses)
+serves it back into Label Studio, so newly imported frames arrive pre-boxed and
+only need correcting rather than drawn from scratch. This is a forward
+reference: the model this section uses doesn't exist until Stage 3 trains it,
+so this labeling step only switches on partway through the project, once a
+first detector is registered. It's a labeling-speed tool, not a decision about
+which frames are worth labeling — that selection is Stage 4's
+`extract_crossing_frames.py`, mining tracker failures for hard negatives to
+send back here.*
+
+## Results
 
 Correctness is verified by querying the `annotations` table directly:
 
@@ -165,7 +189,14 @@ Expected properties: one record per bounding box, `frame_id` values matching the
 `frames` table, normalised coordinates between 0 and 1, and consistent `label` /
 `class_id` values across all records.
 
-## Outcome
+### Auto-labeling coverage
+
+*Fraction of frames where the champion model's predictions needed no correction
+vs minor/major correction, and any measured speedup vs the fully manual baseline
+above. Any failure modes (e.g. suppressed detections during crossings — the same
+weak point Stage 4/5 document).*
+
+## Discussion
 
 Stage 2 establishes a reproducible annotation pipeline that links every extracted
 frame to a structured set of bounding-box records in MySQL: Label Studio as a
@@ -173,3 +204,9 @@ lightweight annotation environment, **366 labelled fish instances across 61
 frames** in YOLO format, each box parsed and stored as a relational record linked
 to its source frame, all inside the Dockerised MySQL environment. This forms the
 labelled dataset layer for downstream model training.
+
+*Auto-labeling likely helps most on routine, single-fish frames and least on
+crossing/occlusion frames — which is exactly what Stage 4's hard-negative loop
+selects for manual review anyway. Together, model-assisted labeling (this
+section) and failure-driven frame selection (Stage 4) form one informal
+active-learning cycle, run by hand rather than automated.*

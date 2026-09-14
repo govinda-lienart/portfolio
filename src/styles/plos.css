@@ -95,6 +95,31 @@
   border-bottom: 2px solid #1a1a1a;
 }
 
+/* ---- sidebar "exit" link: reads as leaving the docs tree, not a page in it ---- */
+.sl-back-link {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem !important;
+  font-weight: 400 !important;
+  color: var(--sl-color-gray-3) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-block: 0.2rem !important;
+}
+.sl-back-link::before {
+  content: '←';
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.sl-back-link:hover { color: var(--sl-color-text-accent) !important; }
+.sl-back-link:hover::before { transform: translateX(-3px); }
+li:has(> .sl-back-link) {
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+
 /* left nav in the sans face, active item gets a blue rule */
 .sidebar-content a { font-family: 'Merriweather Sans', sans-serif; }
 .sidebar-content a[aria-current='page'] {

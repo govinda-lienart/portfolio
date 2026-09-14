@@ -1,6 +1,6 @@
 ---
-title: "Stage 9 · Anomaly detection"
-description: "Unsupervised clustering of behaviour-feature windows to find the natural repertoire and outliers."
+title: "Stage 8 · Pipeline and deployment"
+description: "One trained classifier behind FastAPI, Dockerised, on a single cloud host."
 ---
 
 :::note[Draft]

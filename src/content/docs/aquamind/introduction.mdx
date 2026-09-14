@@ -3,6 +3,8 @@ title: "Introduction"
 description: "Background, motivation and goal of AquaMind."
 ---
 
+import FigureSrc from '../../../components/FigureSrc.astro';
+
 ## The problem
 
 During a behavioural-ecology PhD I scored fish behaviour by hand, frame by frame,
@@ -16,6 +18,14 @@ Detect and track *Danio rerio* reliably across video frames, even when fish are
 occluded behind the plant or the pipes, and then use that tracking to measure
 real behaviour (activity, bottom-dwelling, chasing, feeding strike) for a
 **chemical-alarm-cue antipredator assay**, a standard paradigm in the field.
+
+## Architecture overview
+
+<FigureSrc
+  src="/aquamind/pipeline-overview.svg"
+  alt="AquaMind pipeline overview, stages 1 to 8: a data pipeline (frame extraction, annotation, object detection), a custom tracker, three parallel behaviour classifiers (re-identification, chasing, feeding-strike), and deployment, with two dashed feedback loops from object detection and the tracker back into annotation."
+  caption="Stages 1-8 grouped by role: data pipeline (green, top), tracker (blue), three behaviour classifiers running off the same tracked data (bottom), and deployment (grey, upcoming). Dashed purple arrows are feedback loops, not part of the main forward flow: object detection's trained model is reused inside annotation for model-assisted labeling, and the tracker's own crossing failures are mined as hard negatives sent back to annotation. See [Detailed architecture](/aquamind/pipeline/) for the script-level, engineering-handoff version."
+/>
 
 ## Why this combination
 

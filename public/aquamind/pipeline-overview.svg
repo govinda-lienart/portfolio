@@ -1,0 +1,107 @@
+<svg width="100%" viewBox="0 0 1200 700" role="img" xmlns="http://www.w3.org/2000/svg" font-family="'Anthropic Sans', -apple-system, 'system-ui', 'Segoe UI', sans-serif">
+  <title>AquaMind pipeline overview, stages 1 to 8</title>
+  <desc>Eight-stage pipeline from raw video to deployment, grouped into a data pipeline, a tracker, three parallel behaviour classifiers, and deployment, with two feedback loops back into annotation.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L8 5L1 9" fill="none" stroke="#374151" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-feedback" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L8 5L1 9" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="700" fill="#ffffff"/>
+
+  <!-- ============ ROW 1: data pipeline, stages 1-3 ============ -->
+  <g font-size="15" font-weight="600">
+    <!-- Stage 1 -->
+    <rect x="40" y="40" width="200" height="72" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="140" y="72" text-anchor="middle" fill="#14532d">1 · Frame extraction</text>
+    <text x="140" y="94" text-anchor="middle" font-size="11.5" font-weight="400" fill="#166534">MySQL</text>
+
+    <!-- Stage 2 -->
+    <rect x="280" y="40" width="220" height="72" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="390" y="66" text-anchor="middle" fill="#14532d">2 · Annotation</text>
+    <text x="390" y="86" text-anchor="middle" font-size="11.5" font-weight="400" fill="#166534">MySQL · Label Studio</text>
+    <text x="390" y="102" text-anchor="middle" font-size="11.5" font-weight="400" fill="#166534">+ model-assisted labeling</text>
+
+    <!-- Stage 3 -->
+    <rect x="540" y="40" width="220" height="72" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="650" y="66" text-anchor="middle" fill="#14532d">3 · Object detection</text>
+    <text x="650" y="86" text-anchor="middle" font-size="11.5" font-weight="400" fill="#166534">YOLOv8 · DVC</text>
+    <text x="650" y="102" text-anchor="middle" font-size="11.5" font-weight="400" fill="#166534">MLflow registry</text>
+  </g>
+
+  <!-- forward arrows row 1 -->
+  <line x1="240" y1="76" x2="276" y2="76" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="500" y1="76" x2="536" y2="76" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- ============ ROW 2: tracker, stage 4 ============ -->
+  <rect x="200" y="200" width="400" height="72" rx="8" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+  <text x="400" y="232" text-anchor="middle" font-size="15" font-weight="600" fill="#1e3a8a">4 · Custom tracker &amp; evaluation</text>
+  <text x="400" y="252" text-anchor="middle" font-size="11.5" fill="#1e40af">tracks.parquet (per-run, no MySQL)</text>
+
+  <path d="M 650 112 C 650 150, 500 165, 420 196" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- ============ ROW 3: behaviour classifiers, stages 5-7 ============ -->
+  <g font-size="15" font-weight="600">
+    <!-- Stage 5 -->
+    <rect x="40" y="360" width="220" height="72" rx="8" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="150" y="392" text-anchor="middle" fill="#1e3a8a">5 · Re-identification</text>
+    <text x="150" y="412" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1e40af">crossing swap-auditor</text>
+
+    <!-- Stage 6 -->
+    <rect x="300" y="360" width="220" height="72" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+    <text x="410" y="392" text-anchor="middle" fill="#78350f">6 · Chasing detection</text>
+    <text x="410" y="412" text-anchor="middle" font-size="11.5" font-weight="400" fill="#92400e">kinematic + LSTM</text>
+
+    <!-- Stage 7 -->
+    <rect x="560" y="360" width="220" height="72" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="670" y="392" text-anchor="middle" fill="#14532d">7 · Feeding-strike detection</text>
+    <text x="670" y="412" text-anchor="middle" font-size="11.5" font-weight="400" fill="#166534">CNN-LSTM (benchmarked)</text>
+  </g>
+
+  <!-- fan-out arrows: stage 4 -> 5,6,7 -->
+  <path d="M 340 272 C 300 310, 220 330, 160 356" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path d="M 400 272 L 410 356" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path d="M 460 272 C 500 310, 590 330, 655 356" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- ============ ROW 4: deployment, stage 8 ============ -->
+  <rect x="200" y="500" width="400" height="72" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="400" y="532" text-anchor="middle" font-size="15" font-weight="600" fill="#4b5563">8 · Pipeline &amp; deployment</text>
+  <text x="400" y="552" text-anchor="middle" font-size="11.5" fill="#6b7280">FastAPI · Docker · cloud host</text>
+
+  <!-- fan-in arrows: 5,6,7 -> 8 -->
+  <path d="M 170 432 C 220 460, 300 480, 340 498" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path d="M 410 432 L 400 496" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path d="M 660 432 C 610 460, 530 480, 470 498" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- ============ FEEDBACK LOOPS (dashed, purple) ============ -->
+  <path d="M 300 200 C 250 160, 420 130, 460 116" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-feedback)"/>
+  <text x="330" y="150" font-size="11.5" font-style="italic" fill="#6d28d9">hard-negative mining (crossings)</text>
+
+  <path d="M 620 112 C 600 140, 460 150, 420 128" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-feedback)"/>
+  <text x="560" y="180" font-size="11.5" font-style="italic" fill="#6d28d9">auto-labeling (model-assisted)</text>
+
+  <!-- ============ LEGEND ============ -->
+  <g font-size="12">
+    <rect x="40" y="620" width="16" height="16" rx="3" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="62" y="632" fill="#374151">Done</text>
+
+    <rect x="140" y="620" width="16" height="16" rx="3" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="162" y="632" fill="#374151">Stable / settled</text>
+
+    <rect x="280" y="620" width="16" height="16" rx="3" fill="#fef3c7" stroke="#d97706"/>
+    <text x="302" y="632" fill="#374151">In progress</text>
+
+    <rect x="400" y="620" width="16" height="16" rx="3" fill="#f3f4f6" stroke="#9ca3af" stroke-dasharray="4 3"/>
+    <text x="422" y="632" fill="#374151">Upcoming</text>
+
+    <line x1="520" y1="628" x2="556" y2="628" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <text x="562" y="632" fill="#374151">data flow</text>
+
+    <line x1="660" y1="628" x2="696" y2="628" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-feedback)"/>
+    <text x="702" y="632" fill="#6d28d9">feedback loop</text>
+  </g>
+</svg>

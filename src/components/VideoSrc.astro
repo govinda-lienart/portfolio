@@ -3,15 +3,22 @@ interface Props {
   src: string;
   poster?: string;
   caption?: string;
+  startTime?: number;
+  autoplayOnScroll?: boolean;
 }
-const { src, poster, caption } = Astro.props;
+const { src, poster, caption, startTime, autoplayOnScroll } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const href = src.startsWith('http') || src.startsWith(base) ? src : `${base}${src}`;
 const posterHref = poster && (poster.startsWith('http') || poster.startsWith(base) ? poster : `${base}${poster}`);
 ---
 
 <figure class="am-video">
-  <video controls muted loop playsinline poster={posterHref} preload="none">
+  <video
+    controls muted loop playsinline poster={posterHref}
+    preload={autoplayOnScroll ? "metadata" : "none"}
+    data-start-time={startTime ?? undefined}
+    data-scroll-autoplay={autoplayOnScroll ? "true" : undefined}
+  >
     <source src={href} type="video/mp4" />
   </video>
   {caption && (
@@ -21,6 +28,39 @@ const posterHref = poster && (poster.startsWith('http') || poster.startsWith(bas
     </figcaption>
   )}
 </figure>
+
+<script>
+  // Opt-in per-instance behavior via data attributes, so videos without
+  // these attributes (the default) keep the old click-to-play behavior.
+  const videos = document.querySelectorAll<HTMLVideoElement>('video[data-start-time], video[data-scroll-autoplay]');
+
+  videos.forEach((video) => {
+    const startTime = video.dataset.startTime ? parseFloat(video.dataset.startTime) : null;
+    if (startTime !== null) {
+      // fires once per src load, not on the native loop's wrap back to 0 —
+      // so the custom start point only applies the first time, loops go to true 0:00
+      video.addEventListener('loadedmetadata', () => {
+        video.currentTime = startTime;
+      }, { once: true });
+    }
+
+    if (video.dataset.scrollAutoplay === 'true') {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              video.play().catch(() => {}); // ignore autoplay-blocked rejections
+            } else {
+              video.pause();
+            }
+          });
+        },
+        { threshold: 0.5 }
+      );
+      observer.observe(video);
+    }
+  });
+</script>
 
 <style>
   .am-video { margin: 2em 0; counter-increment: am-video; }

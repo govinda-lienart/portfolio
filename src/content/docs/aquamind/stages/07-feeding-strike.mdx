@@ -1,5 +1,5 @@
 ---
-title: "Stage 8 · Feeding-strike detection"
+title: "Stage 7 · Feeding-strike detection"
 description: "Feeding-strike detection: classical and deep learning both fail, a simple burst signal still helps"
 ---
 
@@ -10,7 +10,7 @@ import VideoSrc from '../../../../components/VideoSrc.astro';
 
 <PaperHeader
   subtitle="Feeding-strike detection: classical and deep learning both fail, a simple burst signal still helps"
-  venue="AquaMind · Stage 8"
+  venue="AquaMind · Stage 7"
   date="September 2026"
   meta="Video: IMG_2349.MOV (4-5 fish, food-injection segment) · 118 labelled strikes"
 />
@@ -34,10 +34,11 @@ result: the strike-defining cues are not resolvable from centroid tracks or
 re-ID-oriented crops at this frame rate, a data limitation rather than a
 fixable modelling gap. A third, deliberately simpler approach then recovers a
 usable signal from the same tracked data: a group-level burst-rate index,
-built from nothing more than smoothed speed peaks, rises from **2.64** to
-**3.03** to **4.03 events/sec** across baseline, sand control and real feeding,
-and tracks real feeding closely enough on direct visual inspection to work as
-a lab-condition readout where both purpose-built classifiers could not.
+built from nothing more than smoothed speed peaks against a control-only,
+data-derived threshold, rises from a control mean of **2.94** to a feeding
+mean of **4.17 events/sec**, a roughly 1.4x increase, and tracks real feeding
+closely enough on direct visual inspection to work as a lab-condition readout
+where both purpose-built classifiers could not.
 </Abstract>
 
 ## Introduction
@@ -79,7 +80,7 @@ image crops.
 
 ## Methods
 
-Stage 8 trains a per-fish feeding-strike classifier from a set of hand-labelled
+Stage 7 trains a per-fish feeding-strike classifier from a set of hand-labelled
 strike events. Two approaches are compared on an identical set of windows: a
 geometry baseline built from movement alone, and a CNN-LSTM built from the fish's
 appearance. The appearance model is the one of interest, because a feeding strike
@@ -90,8 +91,8 @@ input.
 
 <FigureSrc
   src="/aquamind/stages/08-feeding-strike-pipeline.svg"
-  alt="Stage 8 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives from the sand-injection control segment. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping), reaching 64 percent accuracy on the balanced test split. That trained model then feeds infer_feeding.py, a negative control that runs it as a sliding-window classifier over full sand and food phases of the same recording: it calls a strike on 46 percent of no-food windows versus 64 percent of real-feeding windows, mean P(strike) 0.48 versus 0.60, showing the balanced accuracy figure does not hold on a realistic stream. Because neither the geometry baseline nor the CNN-LSTM survives that stream test, an arrow leads from the negative-control result down to a fallback box: render_feeding_burst_overlay.py, a purely descriptive per-fish burst-rate metric compared pooled across the control and feeding phases, with no per-strike claim. Accuracy figures are reported in the Results section."
-  caption="Stage 8 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two approaches compared on identical data, a geometry baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; the trained model is then stream-tested by infer_feeding.py, a negative control that lands near chance as well. Because neither approach survives that test, it falls back to a descriptive burst-rate metric (purple) rather than another classifier. Performance figures are in Results. Click to zoom."
+  alt="Stage 7 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives from the sand-injection control segment. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping), reaching 64 percent accuracy on the balanced test split. That trained model then feeds infer_feeding.py, a negative control that runs it as a sliding-window classifier over full sand and food phases of the same recording: it calls a strike on 46 percent of no-food windows versus 64 percent of real-feeding windows, mean P(strike) 0.48 versus 0.60, showing the balanced accuracy figure does not hold on a realistic stream. Because neither the geometry baseline nor the CNN-LSTM survives that stream test, an arrow leads from the negative-control result down to a fallback box: render_feeding_burst_overlay.py, a purely descriptive per-fish burst-rate metric compared pooled across the control and feeding phases, with no per-strike claim. Accuracy figures are reported in the Results section."
+  caption="Stage 7 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two approaches compared on identical data, a geometry baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; the trained model is then stream-tested by infer_feeding.py, a negative control that lands near chance as well. Because neither approach survives that test, it falls back to a descriptive burst-rate metric (purple) rather than another classifier. Performance figures are in Results. Click to zoom."
 />
 
 ### Data
@@ -232,22 +233,31 @@ rather than on a hand-picked 50/50 set.
 Once Approaches 1 and 2 both failed the stream test above, <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/render_feeding_burst_overlay.py" target="_blank" rel="noopener noreferrer"><code>render_feeding_burst_overlay.py</code></a>
 drops per-fish, per-strike attribution entirely. It reuses the same
 `tracks.parquet` and per-fish speed (smoothed the same way as the geometry
-baseline) to detect bursts as local peaks in speed, then pools burst counts
-across all fish rather than assigning any burst to a specific strike or fish.
-Bursts are compared as a rate (events per second) across three segments of
-the same recording: the calm baseline, the sand-injection control, and the
-real feeding phase. This is a deliberately smaller claim than either
-classifier above: it asks only whether the group's overall burst rate shifts
-with real feeding, not which fish struck or when.
+baseline) to detect bursts as local peaks in speed via `scipy.signal.find_peaks`,
+then pools burst counts across all fish rather than assigning any burst to a
+specific strike or fish. Bursts are compared as a rate (events per second)
+across two segments of the same recording: control (calm baseline plus the
+sand-injection phase, collapsed together since both are "no real food") and
+real feeding. This is a deliberately smaller claim than either classifier
+above: it asks only whether the group's overall burst rate shifts with real
+feeding, not which fish struck or when.
 
-The peak-detection cutoff itself is data-derived rather than picked by eye:
-the 95th percentile of smoothed speed measured during the calm-baseline-plus-
-sand segment, with the food-injection segment excluded from that calculation
-so the effect under study cannot leak into the baseline used to detect it.
+A speed peak only counts as a burst if it clears three gates, all applied in
+one `find_peaks` call:
+
+- **height** ≥ `BURST_MIN_CMS`, the 85th percentile of smoothed speed measured
+  during the control segment alone, with the feeding segment excluded from
+  that calculation so the effect under study cannot leak into the baseline
+  used to detect it (data-derived rather than picked by eye, landing at
+  roughly 8.75 cm/s here)
+- **prominence** ≥ 4.0 cm/s, so the peak has to stand out from its own local
+  dip, not just ride along the top of an already-elevated stretch
+- **distance** ≥ 0.4s between peaks, so two spikes closer together than that
+  count as one burst rather than the same lunge counted twice
 
 <FigureSrc
   src="/aquamind/stages/08-burst-threshold-histogram.png"
-  alt="Density-normalised histogram of per-frame smoothed speed, control segment (baseline plus sand injection, blue) versus feeding segment (orange), with a dashed red line marking the 95th-percentile burst threshold derived from the control segment alone."
+  alt="Density-normalised histogram of per-frame smoothed speed, control segment (baseline plus sand injection, blue) versus feeding segment (orange), with a dashed red line marking the 85th-percentile burst threshold derived from the control segment alone."
   caption="Control versus feeding speed distributions (density-normalised so the roughly 2x difference in segment length does not distort the comparison). The two curves overlap heavily through the shared peak, so no single frame is classifiable by speed alone, but feeding sits visibly higher through the tail past the threshold, the population-level signal the burst-rate metric below is built on."
 />
 
@@ -329,17 +339,26 @@ fish, with no attempt to say which fish struck or when.
 
 | Segment | Pooled burst rate (events/sec) |
 |---|---|
-| Baseline (no injection) | 2.64 |
-| Control injection (sand) | 3.03 |
-| Real feeding | 4.03 |
+| Control (baseline + sand injection) | 2.94 |
+| Real feeding | 4.17 |
 
-Burst rate rises 1.5x from baseline to real feeding, concentrated at the food
-injection rather than the injection event itself (the sand-injection control
-only accounts for a small part of the increase). It does not need to solve the
-per-strike attribution problem the previous two tests failed at, since it
-never claims to say which fish struck or when; it is a legitimate before/after
-readout for the alarm-cue assay, and the closest thing to a working
-deliverable this stage produced.
+<FigureSrc
+  src="/aquamind/stages/08-burst-rate-over-time.png"
+  alt="Line plot of pooled burst rate in 10-second bins over the full recording, shaded blue for the control segment and orange for feeding, with dashed horizontal lines at each segment's mean (control 2.94/s, feeding 4.17/s)."
+  caption="Burst rate over time, control versus feeding, binned every 10 seconds and pooled across all fish. The rate visibly steps up at the control/feeding boundary and stays elevated for the rest of the recording, rather than spiking once and decaying back to baseline."
+/>
+
+<VideoSrc
+  src="https://pub-cf50a9fd7ca6482399934d07a6940d2a.r2.dev/stage6-feeding-burst-overlay.mp4"
+  autoplayOnScroll={true}
+  caption="The full recording with the burst overlay live: a star flashes on a fish the instant its speed crosses the burst threshold, a running per-fish control/feeding count updates in the corner, and a BASELINE / SAND (control) / FEEDING subtitle at tank-floor level marks which experimental phase is currently playing. The counters visibly accelerate once the video crosses into the feeding segment."
+/>
+
+Burst rate rises roughly 1.4x from control to real feeding. It does not need
+to solve the per-strike attribution problem the previous two tests failed at,
+since it never claims to say which fish struck or when; it is a legitimate
+before/after readout for the alarm-cue assay, and the closest thing to a
+working deliverable this stage produced.
 
 ## Discussion
 
@@ -403,7 +422,7 @@ distributions overlap enough that no single frame gives away which condition
 it came from; somewhere past their shared peak, in the population of frames
 rare rather than typical, the two curves finally pull apart.
 
-The threshold used here is the 95th percentile of speed from the
+The threshold used here is the 85th percentile of speed from the
 calm-baseline-plus-sand segment, with the food-injection segment excluded
 from that calculation on purpose. The exclusion matters more than the
 percentile: fold feeding speeds into the same calculation and a real speed
@@ -431,7 +450,7 @@ anyone outside a single recording has reason to trust it. That is the
 natural next step for per-strike detection too, treated as still open rather
 than closed: a movement-based feature set richer than raw speed, closer to
 the bearing and lagged path-following features already scoped for the
-chasing classifier in Stage 7, combined with the burst signal and its pooled
+chasing classifier in Stage 6, combined with the burst signal and its pooled
 threshold, is a more promising direction than a bigger appearance model on
 the same crops. None of that is built or claimed here; it is the concrete
 direction this negative result points toward, needing considerably more
