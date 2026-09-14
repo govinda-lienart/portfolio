@@ -1,0 +1,168 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+interface Stage {
+  num: number;
+  slug: string;
+  name: string;
+  lines: string[];
+  fill: string;
+  stroke: string;
+  titleColor: string;
+  descColor: string;
+  dashed?: boolean;
+}
+
+const stages: Stage[] = [
+  {
+    num: 1, slug: '01-frame-extraction', name: 'Frame extraction',
+    lines: ['Extracts 1 frame/sec from video, stores frame paths in MySQL.'],
+    fill: '#dcfce7', stroke: '#16a34a', titleColor: '#14532d', descColor: '#166534',
+  },
+  {
+    num: 2, slug: '02-annotation', name: 'Annotation',
+    lines: ['Labels boxes in Label Studio, model-assisted, stores in MySQL.'],
+    fill: '#dcfce7', stroke: '#16a34a', titleColor: '#14532d', descColor: '#166534',
+  },
+  {
+    num: 3, slug: '03-object-detection', name: 'Object detection',
+    lines: ['Builds a versioned YOLO dataset (DVC), fine-tunes YOLOv8 (MLflow).'],
+    fill: '#dcfce7', stroke: '#16a34a', titleColor: '#14532d', descColor: '#166534',
+  },
+  {
+    num: 4, slug: '04-tracker', name: 'Custom tracker & evaluation',
+    lines: ['SORT-style tracker → per-fish tracks, ground-truthed against human review.'],
+    fill: '#dbeafe', stroke: '#1d4ed8', titleColor: '#1e3a8a', descColor: '#1e40af',
+  },
+  {
+    num: 5, slug: '05-reid', name: 'Re-identification',
+    lines: ["Appearance embedding audits the tracker's identity decisions."],
+    fill: '#dbeafe', stroke: '#1d4ed8', titleColor: '#1e3a8a', descColor: '#1e40af',
+  },
+  {
+    num: 6, slug: '06-chasing', name: 'Chasing detection',
+    lines: ['Kinematic features + LSTM flag chase events between fish.'],
+    fill: '#ede9fe', stroke: '#7c3aed', titleColor: '#4c1d95', descColor: '#5b21b6',
+  },
+  {
+    num: 7, slug: '07-feeding-strike', name: 'Feeding-strike detection',
+    lines: ['CNN + LSTM on appearance — fails a stream test, a rigorous negative result.'],
+    fill: '#ede9fe', stroke: '#7c3aed', titleColor: '#4c1d95', descColor: '#5b21b6',
+  },
+  {
+    num: 8, slug: '08-deployment', name: 'Pipeline & deployment',
+    lines: ['One trained classifier behind FastAPI, Dockerized, on a cloud host.'],
+    fill: '#f3f4f6', stroke: '#9ca3af', titleColor: '#374151', descColor: '#4b5563', dashed: true,
+  },
+];
+
+const boxH = 56;
+const gap = 12;
+const step = boxH + gap;
+const top = 60;
+const boxX = 40;
+const boxW = 560;
+const boxRight = boxX + boxW;
+const cx = boxX + boxW / 2;
+const svgW = 760;
+const legendY = top + stages.length * step - gap + 26;
+const svgH = legendY + 40;
+
+// feedback loops: object detection's model feeds back into annotation (auto-labeling),
+// and the tracker's own crossing failures feed back into annotation (hard-negative mining)
+// — offset the two arrival points slightly so the arrowheads don't collide on the box edge
+const yStage2 = top + 1 * step + boxH / 2;
+const yStage2A = yStage2 - 7;
+const yStage2B = yStage2 + 7;
+const yStage3 = top + 2 * step + boxH / 2;
+const yStage4 = top + 3 * step + boxH / 2;
+const loopAX = boxRight + 30; // auto-labeling: 3 -> 2
+const loopBX = boxRight + 68; // hard-negative mining: 4 -> 2
+---
+
+<figure class="am-arch-overview">
+  <svg width="100%" viewBox={`0 0 ${svgW} ${svgH}`} role="img" xmlns="http://www.w3.org/2000/svg">
+    <title>AquaMind pipeline, stages 1 to 8, one line each</title>
+    <desc>Eight stages stacked top to bottom, each linking to its full page, colour-coded by topic: data pipeline, tracker and identity, behaviour classifiers, deployment. Two dashed feedback loops run from object detection and from the tracker back into annotation.</desc>
+    <defs>
+      <marker id="arch-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+      <marker id="arch-arrow-feedback" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+    <rect x="0" y="0" width={svgW} height={svgH} fill="#ffffff"/>
+    <text x={svgW / 2} y="24" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-size="14.5" font-weight="700" fill="#111">AquaMind pipeline — stage by stage</text>
+    <g transform={`translate(${svgW / 2 - 78} 30)`}>
+      <circle cx="6" cy="6" r="7" fill="#1d4ed8"/>
+      <text x="6" y="9.5" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-size="9.5" font-weight="700" font-style="italic" fill="#ffffff">i</text>
+      <text x="18" y="10" font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10.5" font-weight="600" fill="#1d4ed8">Click a stage to open its page.</text>
+    </g>
+
+    {stages.map((s, i) => {
+      const y = top + i * step;
+      return (
+        <>
+          <a href={`${base}/aquamind/stages/${s.slug}/`} class="am-arch-overview__link">
+            <rect class="box" x={boxX} y={y} width={boxW} height={boxH} rx="7" fill={s.fill} stroke={s.stroke} stroke-dasharray={s.dashed ? '6 4' : undefined}/>
+            <text x={boxX + 16} y={y + 22} font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5" font-weight="700" fill={s.titleColor}>{s.num} · {s.name}</text>
+            {s.lines.map((line, li) => (
+              <text x={boxX + 16} y={y + 40 + li * 15} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="11" fill={s.descColor}>{line}</text>
+            ))}
+          </a>
+          {i < stages.length - 1 && (
+            <line x1={cx} y1={y + boxH} x2={cx} y2={y + boxH + gap} stroke="#555" stroke-width="1.5" marker-end="url(#arch-arrow)"/>
+          )}
+        </>
+      );
+    })}
+
+    <!-- feedback loops: model-assisted labeling (a) and hard-negative mining (b), both back into Annotation.
+         Labelled a/b with small circle badges instead of on-curve text — rotated micro-text in this
+         narrow a lane was unreadable; the caption below spells each one out in full. -->
+    <path d={`M ${boxRight} ${yStage3} C ${loopAX} ${yStage3} ${loopAX} ${yStage2A} ${boxRight} ${yStage2A}`} fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arch-arrow-feedback)"/>
+    <circle cx={loopAX} cy={(yStage2A + yStage3) / 2} r="8" fill="#ffffff" stroke="#7c3aed" stroke-width="1.3"/>
+    <text x={loopAX} y={(yStage2A + yStage3) / 2 + 3.5} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#6d28d9" text-anchor="middle">a</text>
+
+    <path d={`M ${boxRight} ${yStage4} C ${loopBX} ${yStage4} ${loopBX} ${yStage2B} ${boxRight} ${yStage2B}`} fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arch-arrow-feedback)"/>
+    <circle cx={loopBX} cy={(yStage2B + yStage4) / 2} r="8" fill="#ffffff" stroke="#7c3aed" stroke-width="1.3"/>
+    <text x={loopBX} y={(yStage2B + yStage4) / 2 + 3.5} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#6d28d9" text-anchor="middle">b</text>
+
+    <g>
+      <rect x={boxX} y={legendY} width="12" height="12" rx="3" fill="#dcfce7" stroke="#16a34a"/>
+      <text x={boxX + 17} y={legendY + 10} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#555">Data pipeline</text>
+
+      <rect x={boxX + 120} y={legendY} width="12" height="12" rx="3" fill="#dbeafe" stroke="#1d4ed8"/>
+      <text x={boxX + 137} y={legendY + 10} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#555">Tracker &amp; identity</text>
+
+      <rect x={boxX + 260} y={legendY} width="12" height="12" rx="3" fill="#ede9fe" stroke="#7c3aed"/>
+      <text x={boxX + 277} y={legendY + 10} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#555">Behaviour classifiers</text>
+
+      <rect x={boxX + 430} y={legendY} width="12" height="12" rx="3" fill="#f3f4f6" stroke="#9ca3af" stroke-dasharray="4 3"/>
+      <text x={boxX + 447} y={legendY + 10} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#555">Deployment</text>
+
+      <line x1={boxX + 540} y1={legendY + 6} x2={boxX + 570} y2={legendY + 6} stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arch-arrow-feedback)"/>
+      <text x={boxX + 576} y={legendY + 10} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#6d28d9">feedback loop</text>
+    </g>
+  </svg>
+  <figcaption>
+    <span class="am-figure__label">Fig</span>
+    All eight stages in build order, coloured by topic — click one to open its full page. The two dashed loops are feedback, not part of the forward flow: <strong>(a)</strong> object detection's trained model feeds back into annotation for model-assisted labeling, and <strong>(b)</strong> the tracker's own crossing failures are mined as hard negatives sent back to annotation. See <a href={`${base}/aquamind/architecture/detailed/`}>Detailed</a> for the script-level architecture.
+  </figcaption>
+</figure>
+
+<style>
+  .am-arch-overview { margin: 2em 0; counter-increment: am-figure; max-width: 52rem; }
+  .am-arch-overview svg { display: block; border: 1px solid var(--sl-color-hairline); background: #fff; }
+  .am-arch-overview__link { cursor: pointer; }
+  .am-arch-overview__link .box { transition: stroke-width 0.1s ease, filter 0.1s ease; }
+  .am-arch-overview__link:hover .box { stroke-width: 2.5; filter: brightness(0.97); }
+  .am-arch-overview figcaption {
+    margin-top: 0.7rem;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .am-figure__label { font-family: 'Merriweather Sans', sans-serif; font-weight: 800; }
+  .am-figure__label::after { content: ' ' counter(am-figure) '. '; }
+</style>

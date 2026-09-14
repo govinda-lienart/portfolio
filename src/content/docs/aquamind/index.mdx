@@ -1,11 +1,12 @@
 ---
-title: AquaMind
+title: About this project
 description: Automated computer-vision analysis of zebrafish behaviour, an end-to-end PyTorch + OpenCV pipeline.
 tableOfContents: false
 ---
 
 import { Image } from 'astro:assets';
 import Abstract from '../../../components/Abstract.astro';
+import FigureSrc from '../../../components/FigureSrc.astro';
 import cover from '../../../assets/aquamind/cover.jpeg';
 
 <Image src={cover} alt="Two Danio rerio near an Anubias leaf in the observation tank, light refracting into a spectrum on the back glass" width={900} />
@@ -20,12 +21,20 @@ plants and pipes, and uses that tracking to measure activity, bottom-dwelling,
 chasing and feeding strikes for a chemical-alarm-cue antipredator assay.
 </Abstract>
 
+## The problem
+
+During a behavioural-ecology PhD I scored fish behaviour by hand, frame by frame,
+for years: line crossings, feeding strikes, chases. It is slow, it does not
+scale, and it is hard to keep consistent between observers. AquaMind automates
+that scoring with a computer-vision pipeline.
+
 ## What it does
 
 The pipeline detects and tracks individual fish across video frames, holding
 identity even when a fish is partly hidden behind the plant or a pipe, and then
 uses that tracking to measure real behaviour: activity, bottom-dwelling, chasing
-and feeding strikes.
+and feeding strikes, for a **chemical-alarm-cue antipredator assay**, a standard
+paradigm in the field.
 
 ## How it is built
 
@@ -37,8 +46,45 @@ and feeding strikes.
 | Data | MySQL for frames, annotations and tracks |
 | ML operations | MLflow for experiment tracking and a model registry, DVC for dataset versioning |
 
+## Why this combination
+
+The point of the project is the behavioural-ecologist × ML-engineer overlap. I
+know what the behaviours *mean* and how they are measured in the field, not just
+how to detect a moving blob. AquaMind is built end to end: data pipeline,
+detector, tracker, re-identification and behaviour classifiers, with the
+experiment tracking and dataset versioning a real project needs.
+
+## Architecture overview
+
+<FigureSrc
+  src="/aquamind/pipeline-overview.svg"
+  alt="AquaMind pipeline overview, stages 1 to 8: a data pipeline (frame extraction, annotation, object detection), a custom tracker, three parallel behaviour classifiers (re-identification, chasing, feeding-strike), and deployment, with two dashed feedback loops from object detection and the tracker back into annotation."
+  caption="Stages 1-8 grouped by role: data pipeline (green, top), tracker (blue), three behaviour classifiers running off the same tracked data (bottom), and deployment (grey, upcoming). Dashed purple arrows are feedback loops, not part of the main forward flow: object detection's trained model is reused inside annotation for model-assisted labeling, and the tracker's own crossing failures are mined as hard negatives sent back to annotation. See [Architecture](/aquamind/architecture/detailed/) for the script-level, engineering-handoff version."
+/>
+
+## Scope
+
+AquaMind today is a developer pipeline: scripts, a local MySQL database, MLflow and
+DVC, no GUI. `idtracker.ai` already serves non-coding biologists; AquaMind's value
+here is the ML engineering and data architecture. A thin Streamlit/Gradio front
+end and a Docker Compose bundle are a possible later step, not a requirement.
+
+## Background
+
+Govinda Lienart, behavioural ecologist (PhD, James Cook University; published in
+*Animal Behaviour*) moving into machine-learning engineering.
+
+- PhD in behavioural ecology, James Cook University
+- Postgraduate AI, Erasmus Hogeschool Brussels
+- PCAP-certified Python programmer
+
+## Contact
+
+- GitHub: [github.com/govinda-lienart/AquaMind](https://github.com/govinda-lienart/AquaMind)
+- Email: gdh.lienart@gmail.com
+- Looking for: Junior ML Engineer roles, Belgium, from September 2026
+
 ## Where to start
 
-- [Introduction](/portfolio/aquamind/introduction/): background and goal
-- [Pipeline overview](/portfolio/aquamind/pipeline/): how the stages fit together
-- [Stage 1 · Frame extraction](/portfolio/aquamind/stages/01-frame-extraction/): the build, stage by stage
+- [Architecture](/aquamind/architecture/detailed/): the script-level, engineering-handoff diagram
+- [Stage 1 · Frame extraction](/aquamind/stages/01-frame-extraction/): the build, stage by stage

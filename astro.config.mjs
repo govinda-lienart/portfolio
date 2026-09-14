@@ -28,11 +28,16 @@ export default defineConfig({
       ],
       sidebar: [
         { label: 'Home', link: '/', attrs: { class: 'sl-back-link' } },
-        { label: 'Overview', link: '/aquamind/' },
-        { label: 'About me', link: '/aquamind/about/' },
-        { label: 'Introduction', link: '/aquamind/introduction/' },
+        { label: 'About this project', link: '/aquamind/' },
+        {
+          label: 'Architecture',
+          collapsed: false,
+          items: [
+            { label: 'Overview', link: '/aquamind/architecture/' },
+            { label: 'Detailed', link: '/aquamind/architecture/detailed/' },
+          ],
+        },
         { label: 'Tank setup', link: '/aquamind/tank-setup/' },
-        { label: 'Detailed architecture', link: '/aquamind/pipeline/' },
         {
           label: 'Pipeline stages',
           collapsed: false,
@@ -48,7 +53,6 @@ export default defineConfig({
           ],
         },
         { label: 'Discussion', link: '/aquamind/discussion/' },
-        { label: 'References', link: '/aquamind/references/' },
       ],
     }),
   ],

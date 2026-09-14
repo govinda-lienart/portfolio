@@ -27,6 +27,13 @@
   --sl-color-gray-7: #f7f8fa;
 }
 
+/* Starlight only defines --sl-color-gray-7 for light mode (it's unused in dark mode by
+   default), so anything using it — like Abstract.astro's panel background — fell back to
+   its light literal and rendered a white box even in dark mode. Give it a dark value too. */
+:root:not([data-theme='light']) {
+  --sl-color-gray-7: hsl(224, 14%, 16%);
+}
+
 /* ---- headings: Merriweather Sans, dark, no colour ---- */
 .sl-markdown-content h1,
 .sl-markdown-content h2,
