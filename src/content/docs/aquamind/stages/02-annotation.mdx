@@ -128,9 +128,7 @@ CREATE TABLE annotations (
 
 ### Annotation-storage pipeline
 
-[View source on GitHub](https://github.com/govinda-lienart/AquaMind/blob/main/store_annotations.py)
-
-**Design overview.** The script iterates over every `.txt` file in the exported
+**Design overview.** <a href="https://github.com/govinda-lienart/AquaMind/blob/main/store_annotations.py" target="_blank" rel="noopener noreferrer"><code>store_annotations.py</code></a> iterates over every `.txt` file in the exported
 `labels/` folder. For each file the frame number is parsed from the filename,
 used to retrieve the `frame_id` from the `frames` table, and each bounding box is
 inserted as a record into `annotations`.

@@ -65,6 +65,24 @@
       apply();
     }
 
+    function fitToStage() {
+      // SVGs (the schema/pipeline diagrams) are saved with width="100%" and report
+      // unreliable intrinsic pixel sizes in the browser, which throws this math off.
+      // They're vector and already sized to be readable at fit, so skip the boost.
+      if (/\.svg($|\?)/i.test(img.currentSrc || img.src || "")) return;
+      var iw = img.naturalWidth, ih = img.naturalHeight;
+      if (!iw || !ih) return;
+      var stageRect = stage.getBoundingClientRect();
+      var availW = stageRect.width, availH = stageRect.height;
+      // size the browser already renders the image at under `contain` (shrinks if too big, never grows)
+      var containScale = Math.min(availW / iw, availH / ih, 1);
+      var renderedW = iw * containScale, renderedH = ih * containScale;
+      // how much further it could grow while still fitting fully inside the stage
+      var headroom = Math.min(availW / renderedW, availH / renderedH);
+      var initial = Math.min(headroom, 2.5); // cap upscaling so it doesn't get too blurry
+      if (initial > 1.05) setScale(initial);
+    }
+
     function open(src, alt) {
       img.src = src;
       img.alt = alt || "";
@@ -73,6 +91,8 @@
       overlay.hidden = false;
       document.documentElement.style.overflow = "hidden";
       close.focus();
+      if (img.complete) fitToStage();
+      else img.onload = fitToStage;
     }
 
     function hide() {

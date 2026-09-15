@@ -49,7 +49,7 @@ timestamp, so Stage 2's annotation work has something stable to label.
   caption="Stage 1 pipeline: sync_videos.py registers each video in MySQL's videos table before extract_frames.py samples it at 1 FPS, producing two outputs per frame (a PNG on disk and a row in the frames table, foreign-keyed back to videos). The two outputs converge into the frame-indexed dataset every later stage builds on. Cylinders mark the two persistent MySQL tables; boxes mark scripts and file output. Click to zoom."
 />
 
-### 1. Choosing a recording format
+### Choosing a recording format
 
 Initial recordings using iPhone 14 (iOS 26) in HEVC (H.265) format introduced
 frame-level colour inconsistencies when processed with OpenCV, resulting in
@@ -73,7 +73,7 @@ extraction.
 Recordings were standardised at 60 FPS to increase temporal resolution, enabling
 finer capture of fast behavioural events such as feeding strikes.
 
-### 2. Setting up the database
+### Setting up the database
 
 A MySQL 8.4 instance runs inside a Docker container, isolated from any local
 database installation, with port 3306 exposed so both the Python scripts and
@@ -92,49 +92,30 @@ repeated on every one of its frame rows.
   caption="Entity-relationship diagram for the two tables Stage 1 creates, in standard crow's-foot notation. video_id in frames is a foreign key into videos.id: one video, many frames."
 />
 
-The full DDL for all four of AquaMind's MySQL tables (the two added by later
+The full table definitions for all four of AquaMind's MySQL tables (the two added by later
 stages are covered where they're introduced) is in
-[schema.sql](https://github.com/govinda-lienart/AquaMind/blob/main/schema.sql)
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/schema.sql" target="_blank" rel="noopener noreferrer"><code>schema.sql</code></a>
 on GitHub which contains a clean, commented, structure-only file with no data, runnable
 as-is against a fresh MySQL instances.
 
-### 3. Registering videos
+### Registering videos
 
-<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/sync_videos.py" target="_blank" rel="noopener noreferrer"><code>sync_videos.py</code></a> reads one row per video from `video_metadata.xlsx`:
-species, morph, tank dimensions, activity, fish count, and filming date, the
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/sync_videos.py" target="_blank" rel="noopener noreferrer"><code>sync_videos.py</code></a> reads one row per video from `video_metadata.xlsx`, filled in manually per
+recording session: species, morph, tank dimensions, activity, fish count, and filming date, the
 experimental metadata that isn't in the video file itself. `fps` and
 `resolution` are not taken from the spreadsheet; they're read directly from
 the video with OpenCV, so they can't drift out of sync with the actual file.
 
-The insert is an upsert keyed on `file_path` (`INSERT ... ON DUPLICATE KEY
-UPDATE`), so re-running the script is safe: an already-registered video gets
-its metadata refreshed instead of duplicated, and `register_video()` reports
-back which of the two happened.
+The insert is an upsert keyed on `file_path`, so re-running the script is safe: an already-registered video gets
+its metadata refreshed instead of duplicated.
 
-### 4. Extracting frames
+### Extracting frames
 
-**Design overview.** <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/extract_frames.py" target="_blank" rel="noopener noreferrer"><code>extract_frames.py</code></a> reads video files sequentially using OpenCV and
-extracts frames at a fixed rate of one frame per second. Each extracted frame is
-saved both as an image file and as a structured record in a MySQL database.
-
-**Frame-rate normalisation.** The frame rate of each video is retrieved directly
-using OpenCV. However, iPhone recordings give a frame rate of `59.94` FPS instead
-of a clean `60` FPS due to underlying NTSC video-encoding standards. If used
-directly, this small discrepancy causes `frame_count % fps == 0` to select frames
-inconsistently. The FPS value is wrapped in `round()` to normalise it to the
-nearest integer before being used in the sampling logic.
-
-**Sampling strategy.** Frames are selected using the expression
-`frame_count % fps == 0`, which ensures that exactly one frame per second is
-extracted. The video is read frame by frame using OpenCV, which returns a boolean
-`ret` and the `frame` image data on each call. When `ret` becomes `False`, the
-video has reached its end and the loop terminates.
-
-**Frame storage.** Each selected frame is saved as a PNG image to preserve full
-image quality without compression loss. This matters because the dataset is
-intended for future annotation and machine-learning tasks where pixel-level
-accuracy counts. For every frame the system records its index and computes its
-timestamp in seconds relative to the start of the video using `frame_count / fps`.
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/extract_frames.py" target="_blank" rel="noopener noreferrer"><code>extract_frames.py</code></a> reads each video sequentially using OpenCV and
+selects exactly one frame per second (FPS rounded to handle iPhone's `59.94` reporting quirk). Each
+selected frame is saved as a lossless PNG to disk, preserving full pixel-level accuracy for
+annotation and machine-learning tasks downstream. In the same step, it's registered as a row in the
+`frames` table, storing its index, its timestamp, and the `frame_path` pointing back to the PNG.
 
 ## Results
 

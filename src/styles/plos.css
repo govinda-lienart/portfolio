@@ -85,7 +85,6 @@
 .sl-markdown-content h3:not(.no-number)::before {
   counter-increment: subsection;
   content: counter(section) '.' counter(subsection) '\00a0\00a0';
-  font-weight: 400;
 }
 
 /* ---- links: journal blue ---- */
