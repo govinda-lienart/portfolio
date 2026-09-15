@@ -37,7 +37,7 @@ export default defineConfig({
             { label: 'Detailed', link: '/aquamind/architecture/detailed/' },
           ],
         },
-        { label: 'Tank setup', link: '/aquamind/tank-setup/' },
+        { label: 'Study system', link: '/aquamind/tank-setup/' },
         {
           label: 'Pipeline stages',
           collapsed: false,

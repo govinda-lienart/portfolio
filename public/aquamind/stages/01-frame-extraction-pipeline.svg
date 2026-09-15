@@ -1,0 +1,98 @@
+<svg width="100%" viewBox="0 0 780 800" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Stage 1 — video registration, frame extraction and persistent storage pipeline</title>
+  <desc>Raw aquarium video, recorded on an iPhone 14 at 60 FPS and switched from HEVC to H.264 after a colour-fidelity bug, is first registered by sync_videos.py, which reads video_metadata_2026_5_30.xlsx and inserts one row per video into the MySQL videos table. extract_frames.py then normalises the reported frame rate with round() and samples one frame per second via frame_count modulo fps. Each selected frame is written twice: as a lossless PNG file on disk, and as a row in the MySQL frames table (frame_number, timestamp, frame_path, video_id foreign key). Both outputs converge into a single frame-indexed dataset that later stages reference by frame number and timestamp instead of re-decoding the source video, feeding forward into Stage 2's LabelStudio annotation step.</desc>
+  <defs>
+    <marker id="arrow1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-anchor: middle; }
+      .d-title { font-size: 15px; font-weight: 700; fill: #111; }
+      .d-sub { font-size: 11px; fill: #666; }
+      .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; font-weight: 600; fill: #1a1a1a; }
+      .desc { font-size: 11px; fill: #4a4a4a; }
+      .prov { font-size: 9.5px; font-weight: 700; fill: #5b7aa8; letter-spacing: 0.5px; }
+      .res { font-size: 12px; font-weight: 700; fill: #2f5a8a; }
+      .note { font-size: 10.5px; font-style: italic; fill: #2f5a8a; }
+      .tiny { font-size: 9px; fill: #9a9a9a; }
+      .legend { font-size: 10px; fill: #555; text-anchor: start; }
+      .box { stroke-width: 1.5; }
+      .cyl { stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="780" height="800" fill="#ffffff"/>
+
+  <text class="d-title" x="390" y="26">Stage 1 — Video Registration, Frame Extraction &amp; Persistent Storage</text>
+  <text class="d-sub" x="390" y="44">IMG_*.MOV · OpenCV · MySQL 8.4 (Docker) · 1 frame/sec</text>
+
+  <!-- input: raw video -->
+  <rect class="box" x="50" y="60" width="680" height="80" rx="8" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="4 3"/>
+  <text class="prov" x="390" y="80">RAW INPUT</text>
+  <text class="name" x="390" y="101">Raw aquarium video · iPhone 14 · 60 FPS</text>
+  <text class="desc" x="390" y="120">HEVC caused faded frame colours → recording switched to H.264 ("Most Compatible")</text>
+
+  <!-- sync_videos.py -->
+  <rect class="box" x="210" y="160" width="360" height="60" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="390" y="184">sync_videos.py</text>
+  <text class="desc" x="390" y="202">reads video_metadata_2026_5_30.xlsx → registers each video</text>
+
+  <!-- videos table (cylinder) -->
+  <path class="cyl" d="M 280,257 L 280,307 A 110,13 0 0 0 500,307 L 500,257 A 110,13 0 0 0 280,257 Z" fill="#d0e0e3" stroke="#45818e"/>
+  <ellipse class="cyl" cx="390" cy="257" rx="110" ry="13" fill="#d0e0e3" stroke="#45818e"/>
+  <text class="name" x="390" y="278">videos (MySQL)</text>
+  <text class="desc" x="390" y="296">id, file_path, fps, species, tank dims…</text>
+
+  <!-- extract_frames.py -->
+  <rect class="box" x="210" y="340" width="360" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="390" y="364">extract_frames.py</text>
+  <text class="desc" x="390" y="382">round(fps) normalises 59.94→60 · frame_count % fps == 0</text>
+  <text class="desc" x="390" y="398">1 frame/sec</text>
+
+  <!-- two outputs -->
+  <rect class="box" x="60" y="452" width="300" height="70" rx="8" fill="#fff2cc" stroke="#d6b656"/>
+  <text class="name" x="210" y="477">PNG frame written to disk</text>
+  <text class="desc" x="210" y="496">lossless, per-frame file, run-versioned folder</text>
+
+  <!-- frames table (cylinder) -->
+  <path class="cyl" d="M 420,466 L 420,532 A 150,14 0 0 0 720,532 L 720,466 A 150,14 0 0 0 420,466 Z" fill="#d0e0e3" stroke="#45818e"/>
+  <ellipse class="cyl" cx="570" cy="466" rx="150" ry="14" fill="#d0e0e3" stroke="#45818e"/>
+  <text class="name" x="570" y="490">frames (MySQL)</text>
+  <text class="desc" x="570" y="508">frame_number, timestamp, frame_path,</text>
+  <text class="desc" x="570" y="524">video_id (FK → videos)</text>
+
+  <!-- converged result -->
+  <rect class="box" x="190" y="590" width="400" height="86" rx="8" fill="#dbe9f6" stroke="#5b7aa8"/>
+  <text class="res" x="390" y="615">Frame-indexed dataset</text>
+  <text class="desc" x="390" y="635">referenced by frame_number / timestamp, no video re-decoding needed</text>
+  <text class="note" x="390" y="660">→ Stage 2: LabelStudio annotation</text>
+
+  <!-- edges -->
+  <g fill="none" stroke="#555" stroke-width="1.5">
+    <polyline points="390,140 390,158" marker-end="url(#arrow1)"/>
+    <polyline points="390,220 390,242" marker-end="url(#arrow1)"/>
+    <polyline points="390,320 390,338" marker-end="url(#arrow1)"/>
+    <polyline points="390,404 390,428 210,428 210,450" marker-end="url(#arrow1)"/>
+    <polyline points="390,404 390,428 570,428 570,450" marker-end="url(#arrow1)"/>
+    <polyline points="210,522 210,566 390,566 390,588" marker-end="url(#arrow1)"/>
+    <polyline points="570,546 570,566 390,566 390,588" marker-end="url(#arrow1)"/>
+  </g>
+
+  <!-- downstream marker -->
+  <polyline points="390,676 390,710" fill="none" stroke="#5b7aa8" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow1)"/>
+  <text class="tiny" x="440" y="702">to Stage 2</text>
+
+  <!-- legend -->
+  <g>
+    <rect x="30" y="748" width="11" height="11" rx="2" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="3 2"/>
+    <text class="legend" x="47" y="757">raw input</text>
+    <rect x="135" y="748" width="11" height="11" rx="2" fill="#d5e8d4" stroke="#82b366"/>
+    <text class="legend" x="152" y="757">script step</text>
+    <rect x="240" y="748" width="11" height="11" rx="2" fill="#fff2cc" stroke="#d6b656"/>
+    <text class="legend" x="257" y="757">disk file output</text>
+    <rect x="380" y="748" width="11" height="11" rx="2" fill="#d0e0e3" stroke="#45818e"/>
+    <text class="legend" x="397" y="757">MySQL table</text>
+    <rect x="500" y="748" width="11" height="11" rx="2" fill="#dbe9f6" stroke="#5b7aa8"/>
+    <text class="legend" x="517" y="757">result → downstream</text>
+  </g>
+</svg>

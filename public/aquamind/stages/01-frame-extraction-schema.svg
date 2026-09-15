@@ -1,0 +1,118 @@
+<svg width="100%" viewBox="0 0 780 480" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Stage 1 — videos and frames entity-relationship diagram</title>
+  <desc>Entity-relationship diagram of the two MySQL tables Stage 1 creates. videos holds one row per registered video: id (primary key), file_path (unique, not null), fps, resolution, activity, plants, fish_count, notes, filmed_at, species, morph, tank_width_cm, tank_height_cm, tank_depth_cm. frames holds one row per extracted frame: id (primary key), video_id (foreign key referencing videos.id, not null), frame_path, frame_number, timestamp, extracted_at, with a unique constraint on (video_id, frame_number). A crow's-foot relationship line connects frames.video_id to videos.id: one bar near videos marks the "one" side, a three-pronged crow's foot near frames marks the "many" side, meaning one video has many frames.</desc>
+  <defs>
+    <style>
+      text { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      .d-title { font-size: 15px; font-weight: 700; fill: #111; text-anchor: middle; }
+      .d-sub { font-size: 11px; fill: #666; text-anchor: middle; }
+      .theader { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+      .col { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; fill: #1a1a1a; text-anchor: start; }
+      .type { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; fill: #666; text-anchor: end; }
+      .badge { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 9px; font-weight: 700; text-anchor: middle; }
+      .foot { font-size: 9.5px; fill: #666; text-anchor: middle; }
+      .rel { font-size: 10px; fill: #555; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="780" height="480" fill="#ffffff"/>
+
+  <text class="d-title" x="390" y="24">Stage 1 — videos / frames Entity-Relationship Diagram</text>
+  <text class="d-sub" x="390" y="41">MySQL 8.4 · one row per video, one row per extracted frame</text>
+
+  <!-- ============ videos table ============ -->
+  <g>
+    <rect x="60" y="62" width="300" height="316" fill="#ffffff" stroke="#34495e" stroke-width="1.5"/>
+    <rect x="60" y="62" width="300" height="28" fill="#34495e"/>
+    <text class="theader" x="210" y="81">videos</text>
+
+    <!-- PK row -->
+    <rect x="60" y="90" width="300" height="20" fill="#fff8e1"/>
+    <rect x="66" y="93" width="18" height="14" rx="3" fill="#c9971f"/>
+    <text class="badge" x="75" y="103" fill="#ffffff">PK</text>
+    <text class="col" x="90" y="104">id</text>
+    <text class="type" x="352" y="104">INT</text>
+
+    <!-- plain rows -->
+    <g>
+      <text class="col" x="90" y="124">file_path</text><text class="type" x="352" y="124">VARCHAR(500) · UNIQUE, NOT NULL</text>
+      <text class="col" x="90" y="144">fps</text><text class="type" x="352" y="144">INT</text>
+      <text class="col" x="90" y="164">resolution</text><text class="type" x="352" y="164">ENUM('720p','1080p','4K')</text>
+      <text class="col" x="90" y="184">activity</text><text class="type" x="352" y="184">VARCHAR(100)</text>
+      <text class="col" x="90" y="204">plants</text><text class="type" x="352" y="204">INT</text>
+      <text class="col" x="90" y="224">fish_count</text><text class="type" x="352" y="224">INT</text>
+      <text class="col" x="90" y="244">notes</text><text class="type" x="352" y="244">TEXT</text>
+      <text class="col" x="90" y="264">filmed_at</text><text class="type" x="352" y="264">DATETIME</text>
+      <text class="col" x="90" y="284">species</text><text class="type" x="352" y="284">VARCHAR(100)</text>
+      <text class="col" x="90" y="304">morph</text><text class="type" x="352" y="304">VARCHAR(100)</text>
+      <text class="col" x="90" y="324">tank_width_cm</text><text class="type" x="352" y="324">FLOAT</text>
+      <text class="col" x="90" y="344">tank_height_cm</text><text class="type" x="352" y="344">FLOAT</text>
+      <text class="col" x="90" y="364">tank_depth_cm</text><text class="type" x="352" y="364">FLOAT</text>
+    </g>
+    <!-- row separators -->
+    <g stroke="#e6e6e6" stroke-width="1">
+      <line x1="60" y1="110" x2="360" y2="110"/>
+      <line x1="60" y1="130" x2="360" y2="130"/>
+      <line x1="60" y1="150" x2="360" y2="150"/>
+      <line x1="60" y1="170" x2="360" y2="170"/>
+      <line x1="60" y1="190" x2="360" y2="190"/>
+      <line x1="60" y1="210" x2="360" y2="210"/>
+      <line x1="60" y1="230" x2="360" y2="230"/>
+      <line x1="60" y1="250" x2="360" y2="250"/>
+      <line x1="60" y1="270" x2="360" y2="270"/>
+      <line x1="60" y1="290" x2="360" y2="290"/>
+      <line x1="60" y1="310" x2="360" y2="310"/>
+      <line x1="60" y1="330" x2="360" y2="330"/>
+      <line x1="60" y1="350" x2="360" y2="350"/>
+    </g>
+    <text class="foot" x="210" y="393">one row per video, registered by sync_videos.py</text>
+  </g>
+
+  <!-- ============ frames table ============ -->
+  <g>
+    <rect x="450" y="62" width="290" height="160" fill="#ffffff" stroke="#34495e" stroke-width="1.5"/>
+    <rect x="450" y="62" width="290" height="28" fill="#34495e"/>
+    <text class="theader" x="595" y="81">frames</text>
+
+    <!-- PK row -->
+    <rect x="450" y="90" width="290" height="20" fill="#fff8e1"/>
+    <rect x="456" y="93" width="18" height="14" rx="3" fill="#c9971f"/>
+    <text class="badge" x="465" y="103" fill="#ffffff">PK</text>
+    <text class="col" x="480" y="104">id</text>
+    <text class="type" x="732" y="104">INT</text>
+
+    <!-- FK row -->
+    <rect x="450" y="110" width="290" height="20" fill="#eaf1fb"/>
+    <rect x="456" y="113" width="18" height="14" rx="3" fill="#2f5a8a"/>
+    <text class="badge" x="465" y="123" fill="#ffffff">FK</text>
+    <text class="col" x="480" y="124">video_id</text>
+    <text class="type" x="732" y="124">INT · NOT NULL</text>
+
+    <text class="col" x="480" y="144">frame_path</text><text class="type" x="732" y="144">VARCHAR(255)</text>
+    <text class="col" x="480" y="164">frame_number</text><text class="type" x="732" y="164">INT</text>
+    <text class="col" x="480" y="184">timestamp</text><text class="type" x="732" y="184">FLOAT (sec from video start)</text>
+    <text class="col" x="480" y="204">extracted_at</text><text class="type" x="732" y="204">TIMESTAMP</text>
+
+    <g stroke="#e6e6e6" stroke-width="1">
+      <line x1="450" y1="130" x2="740" y2="130"/>
+      <line x1="450" y1="150" x2="740" y2="150"/>
+      <line x1="450" y1="170" x2="740" y2="170"/>
+      <line x1="450" y1="190" x2="740" y2="190"/>
+    </g>
+    <text class="foot" x="595" y="238">UNIQUE (video_id, frame_number)</text>
+    <text class="foot" x="595" y="254">one row per frame, written by extract_frames.py</text>
+  </g>
+
+  <!-- ============ crow's-foot relationship: videos is one, frames is many ============ -->
+  <g stroke="#2f5a8a" stroke-width="1.5" fill="none">
+    <polyline points="360,120 410,120 410,120 450,120"/>
+    <!-- "one" bar near videos -->
+    <line x1="372" y1="112" x2="372" y2="128"/>
+    <!-- crow's foot "many" near frames -->
+    <line x1="438" y1="120" x2="450" y2="112"/>
+    <line x1="438" y1="120" x2="450" y2="128"/>
+    <line x1="438" y1="120" x2="450" y2="120"/>
+  </g>
+  <text class="rel" x="390" y="430">One video has many frames (1 : N): the crow's foot marks the "many" side, the bar marks "one".</text>
+  <text class="foot" x="390" y="452">Full DDL (all 5 project tables): aquamind_dump.sql on GitHub</text>
+</svg>
