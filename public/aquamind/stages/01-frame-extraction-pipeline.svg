@@ -1,6 +1,6 @@
 <svg width="100%" viewBox="0 0 780 800" role="img" xmlns="http://www.w3.org/2000/svg">
   <title>Stage 1 — video registration, frame extraction and persistent storage pipeline</title>
-  <desc>Raw aquarium video, recorded on an iPhone 14 at 60 FPS and switched from HEVC to H.264 after a colour-fidelity bug, is first registered by sync_videos.py, which reads video_metadata_2026_5_30.xlsx and inserts one row per video into the MySQL videos table. extract_frames.py then normalises the reported frame rate with round() and samples one frame per second via frame_count modulo fps. Each selected frame is written twice: as a lossless PNG file on disk, and as a row in the MySQL frames table (frame_number, timestamp, frame_path, video_id foreign key). Both outputs converge into a single frame-indexed dataset that later stages reference by frame number and timestamp instead of re-decoding the source video, feeding forward into Stage 2's LabelStudio annotation step.</desc>
+  <desc>Raw aquarium video, recorded on an iPhone 14 at 60 FPS and switched from HEVC to H.264 after a colour-fidelity bug, is first registered by sync_videos.py, which reads video_metadata.xlsx and inserts one row per video into the MySQL videos table. extract_frames.py then normalises the reported frame rate with round() and samples one frame per second via frame_count modulo fps. Each selected frame is written twice: as a lossless PNG file on disk, and as a row in the MySQL frames table (frame_number, timestamp, frame_path, video_id foreign key). Both outputs converge into a single frame-indexed dataset that later stages reference by frame number and timestamp instead of re-decoding the source video, feeding forward into Stage 2's LabelStudio annotation step.</desc>
   <defs>
     <marker id="arrow1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -35,7 +35,7 @@
   <!-- sync_videos.py -->
   <rect class="box" x="210" y="160" width="360" height="60" rx="8" fill="#d5e8d4" stroke="#82b366"/>
   <text class="name" x="390" y="184">sync_videos.py</text>
-  <text class="desc" x="390" y="202">reads video_metadata_2026_5_30.xlsx → registers each video</text>
+  <text class="desc" x="390" y="202">reads video_metadata.xlsx → registers each video</text>
 
   <!-- videos table (cylinder) -->
   <path class="cyl" d="M 280,257 L 280,307 A 110,13 0 0 0 500,307 L 500,257 A 110,13 0 0 0 280,257 Z" fill="#d0e0e3" stroke="#45818e"/>

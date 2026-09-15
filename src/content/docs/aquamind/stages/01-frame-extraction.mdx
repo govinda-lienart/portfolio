@@ -18,11 +18,10 @@ import sqlVerify from '../../../../assets/aquamind/stage-01/sql-verify.png';
 />
 
 <Abstract>
-Stage 1 converts raw aquarium video into a structured, frame-level dataset in
-two steps: each video is registered once in a MySQL `videos` table, then
+Stage 1 converts raw aquarium video into a structured, frame-level MySQL dataset in
+two steps: each video is registered once, along with its metadata, in a MySQL `videos` table, then
 sampled at one frame per second into a `frames` table foreign-keyed back to
-it, so later stages can reference a specific frame by number instead of
-re-decoding video. The result is a reproducible ingestion layer: consistent
+it, so each frame stays traceable to the video it came from. The result is a reproducible ingestion layer: consistent
 1 FPS sampling, lossless PNG frames on disk, and structured metadata across
 two relational tables in a Dockerised MySQL database, forming the foundation
 the annotation and training stages build on.
@@ -30,20 +29,12 @@ the annotation and training stages build on.
 
 ## Introduction
 
-Annotation needs still, addressable images, not a continuously playing video.
-A bounding box in LabelStudio is drawn on one specific frame. That frame must
-be findable again by frame number later, when its annotation is stored, and
-re-decoding the source `.MOV` on demand cannot guarantee that. Stage 1 builds
-that addressable image set: it establishes
-the first two of AquaMind's five MySQL tables (`videos` and `frames`) and
-fixes the one-frame-per-second sampling contract that Stage 2's annotation
-work and Stage 3's YOLO training dataset are built on. That contract is
-specific to this stage's own script, not to the `frames` table as a whole: a
-later hard-negative-mining step feeds tracker-flagged crossing frames back
-into the same table on its own, event-triggered sampling (Stage 2 covers
-that). The tracker itself needs full temporal resolution for its own
-matching, so [Stage 4](/aquamind/stages/04-tracker/) reads the raw video
-directly instead of going through this table at all.
+Annotation, which entails drawing bounding boxes for object detection, needs still, addressable images, not a
+continuously playing video. Therefore the video is extracted and stored as frames, and bounding boxes are drawn on those frames.
+Each frame must be findable again by frame number later, when its annotation is associated to it and stored.
+Stage 1 builds that addressable image set: it establishes the first two of AquaMind's four MySQL tables (`videos`
+and `frames`) and a script that samples at a standard one-frame-per-second rate, spaced widely enough to capture
+varied fish positions, which Stage 2's annotation work and Stage 3's YOLO training dataset are built on.
 
 ## Aim
 
@@ -54,11 +45,11 @@ timestamp, so Stage 2's annotation work has something stable to label.
 
 <FigureSrc
   src="/aquamind/stages/01-frame-extraction-pipeline.svg"
-  alt="Stage 1 video-registration and frame-extraction pipeline. Raw aquarium video, recorded on an iPhone 14 at 60 FPS and switched from HEVC to H.264 after a colour-fidelity bug, is first registered by sync_videos.py, which reads video_metadata_2026_5_30.xlsx and inserts one row per video into the MySQL videos table. extract_frames.py then normalises the reported frame rate with round() and samples one frame per second via frame_count modulo fps. Each selected frame is written twice: as a lossless PNG file on disk, and as a row in the MySQL frames table (frame_number, timestamp, frame_path, video_id foreign key). Both outputs converge into a single frame-indexed dataset that later stages reference by frame number and timestamp instead of re-decoding the source video, feeding forward into Stage 2's LabelStudio annotation step."
-  caption="Stage 1 pipeline: sync_videos.py registers each video in MySQL's videos table before extract_frames.py samples it at 1 FPS, writing each frame twice (a PNG on disk and a row in the frames table, foreign-keyed back to videos). The two outputs converge into the frame-indexed dataset every later stage builds on. Cylinders mark the two persistent MySQL tables; boxes mark scripts and file output. Click to zoom."
+  alt="Stage 1 video-registration and frame-extraction pipeline. Raw aquarium video, recorded on an iPhone 14 at 60 FPS and switched from HEVC to H.264 after a colour-fidelity bug, is first registered by sync_videos.py, which reads video_metadata.xlsx and inserts one row per video into the MySQL videos table. extract_frames.py then normalises the reported frame rate with round() and samples one frame per second via frame_count modulo fps. Each selected frame produces two outputs: a lossless PNG file on disk, and a corresponding row in the MySQL frames table (frame_number, timestamp, frame_path, video_id foreign key). Both outputs converge into a single frame-indexed dataset that later stages reference by frame number and timestamp instead of re-decoding the source video, feeding forward into Stage 2's LabelStudio annotation step."
+  caption="Stage 1 pipeline: sync_videos.py registers each video in MySQL's videos table before extract_frames.py samples it at 1 FPS, producing two outputs per frame (a PNG on disk and a row in the frames table, foreign-keyed back to videos). The two outputs converge into the frame-indexed dataset every later stage builds on. Cylinders mark the two persistent MySQL tables; boxes mark scripts and file output. Click to zoom."
 />
 
-### Video-encoding constraints
+### 1. Choosing a recording format
 
 Initial recordings using iPhone 14 (iOS 26) in HEVC (H.265) format introduced
 frame-level colour inconsistencies when processed with OpenCV, resulting in
@@ -82,22 +73,18 @@ extraction.
 Recordings were standardised at 60 FPS to increase temporal resolution, enabling
 finer capture of fast behavioural events such as feeding strikes.
 
-### Infrastructure setup
+### 2. Setting up the database
 
 A MySQL 8.4 instance runs inside a Docker container, isolated from any local
 database installation, with port 3306 exposed so both the Python scripts and
 MySQL Workbench can connect to it.
 
-### Database schema
-
 Stage 1 creates two relational tables: `videos`, one row per registered
-recording, written by `sync_videos.py`, and `frames`, one row per extracted
-frame, written by `extract_frames.py` and foreign-keyed back to its parent
+recording, written by <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/sync_videos.py" target="_blank" rel="noopener noreferrer"><code>sync_videos.py</code></a>, and `frames`, one row per extracted
+frame, written by <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/extract_frames.py" target="_blank" rel="noopener noreferrer"><code>extract_frames.py</code></a> and foreign-keyed back to its parent
 video. Splitting registration from extraction this way means a video's
 metadata (species, tank dimensions, filming date) is recorded once, not
-repeated on every one of its frame rows, and a `UNIQUE (video_id,
-frame_number)` constraint on `frames` makes it impossible to record the same
-frame index twice for the same video.
+repeated on every one of its frame rows.
 
 <FigureSrc
   src="/aquamind/stages/01-frame-extraction-schema.svg"
@@ -105,16 +92,15 @@ frame index twice for the same video.
   caption="Entity-relationship diagram for the two tables Stage 1 creates, in standard crow's-foot notation. video_id in frames is a foreign key into videos.id: one video, many frames."
 />
 
-The full DDL for all five of AquaMind's MySQL tables (the three added by
-later stages are covered where they're introduced) is in
-[aquamind_dump.sql](https://github.com/govinda-lienart/AquaMind/blob/main/aquamind_dump.sql)
-on GitHub.
+The full DDL for all four of AquaMind's MySQL tables (the two added by later
+stages are covered where they're introduced) is in
+[schema.sql](https://github.com/govinda-lienart/AquaMind/blob/main/schema.sql)
+on GitHub which contains a clean, commented, structure-only file with no data, runnable
+as-is against a fresh MySQL instances.
 
-### Video registration
+### 3. Registering videos
 
-[View source on GitHub](https://github.com/govinda-lienart/AquaMind/blob/main/scripts/sync_videos.py)
-
-`sync_videos.py` reads one row per video from `video_metadata_2026_5_30.xlsx`:
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/sync_videos.py" target="_blank" rel="noopener noreferrer"><code>sync_videos.py</code></a> reads one row per video from `video_metadata.xlsx`:
 species, morph, tank dimensions, activity, fish count, and filming date, the
 experimental metadata that isn't in the video file itself. `fps` and
 `resolution` are not taken from the spreadsheet; they're read directly from
@@ -125,11 +111,9 @@ UPDATE`), so re-running the script is safe: an already-registered video gets
 its metadata refreshed instead of duplicated, and `register_video()` reports
 back which of the two happened.
 
-### Frame-extraction pipeline
+### 4. Extracting frames
 
-[View source on GitHub](https://github.com/govinda-lienart/AquaMind/blob/main/scripts/extract_frames.py)
-
-**Design overview.** The pipeline reads video files sequentially using OpenCV and
+**Design overview.** <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/extract_frames.py" target="_blank" rel="noopener noreferrer"><code>extract_frames.py</code></a> reads video files sequentially using OpenCV and
 extracts frames at a fixed rate of one frame per second. Each extracted frame is
 saved both as an image file and as a structured record in a MySQL database.
 
@@ -163,9 +147,16 @@ separation between different extraction runs in the filesystem.
 
 ## Discussion
 
-Stage 1 establishes a reproducible ingestion pipeline in two steps: `sync_videos.py`
-registers each video once, and `extract_frames.py` samples it at a temporally
+Stage 1 establishes a reproducible ingestion pipeline in two steps: <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/sync_videos.py" target="_blank" rel="noopener noreferrer"><code>sync_videos.py</code></a>
+registers each video once, and <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/extract_frames.py" target="_blank" rel="noopener noreferrer"><code>extract_frames.py</code></a> samples it at a temporally
 consistent 1 FPS. Reliable H.264 decoding, lossless PNG frames on disk, and
 metadata split across the `videos` and `frames` MySQL tables together form the
 foundational dataset layer for subsequent annotation, labelling and model
 training.
+
+The 1 FPS sampling contract fixed here is specific to this stage's own
+script, not to the `frames` table as a whole: a later hard-negative-mining
+step feeds tracker-flagged crossing frames back into the same table on its
+own, event-triggered sampling (Stage 2 covers that). The tracker itself needs
+full temporal resolution for its own matching, so [Stage 4](/aquamind/stages/04-tracker/)
+reads the raw video directly instead of going through this table at all.
