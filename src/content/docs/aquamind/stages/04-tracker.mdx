@@ -60,6 +60,15 @@ The tracker is **SORT-family, not Kalman**. Its core:
 
 All parameters live in `config.yaml`.
 
+**Data pipeline.** The tracker reads each video directly with OpenCV rather than going through
+[Stage 1](/portfolio/aquamind/stages/01-frame-extraction/)'s `frames` table: matching needs every
+frame at full temporal resolution, not the 1 FPS sample the annotation pipeline stores. Per-frame
+detections and track state are held and updated as vectorized pandas dataframes rather than
+per-row MySQL writes, since that's what the frame-by-frame matching math needs; the finished
+per-fish tracks are then written out to `tracks.parquet`, the format the downstream behaviour
+stages ([Stage 6](/portfolio/aquamind/stages/06-chasing/),
+[Stage 7](/portfolio/aquamind/stages/07-feeding-strike/)) read from.
+
 :::note[Draft]
 A full walk-through of the current tracker is still being written. The section
 below is the migrated experiment log from the earlier Kalman-filter iteration

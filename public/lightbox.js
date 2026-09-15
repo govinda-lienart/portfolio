@@ -156,7 +156,9 @@
       image.dataset.lightbox = "1";
       image.classList.add("lightbox-trigger");
       image.addEventListener("click", function () {
-        api.open(image.currentSrc || image.src, image.alt);
+        // prefer the original, unprocessed image (data-full) over the
+        // display-sized one Astro's <Image> generates, so zooming stays sharp
+        api.open(image.dataset.full || image.currentSrc || image.src, image.alt);
       });
     });
   }

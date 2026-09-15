@@ -12,7 +12,7 @@ const { src, alt, caption, width = 900 } = Astro.props;
 ---
 
 <figure class="am-figure">
-  <Image src={src} alt={alt} width={width} />
+  <Image src={src} alt={alt} width={width} data-full={src.src} />
   {caption && (
     <figcaption>
       <span class="am-figure__label">Fig</span>
