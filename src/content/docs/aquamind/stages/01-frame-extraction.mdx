@@ -101,15 +101,14 @@ as-is against a fresh MySQL instances.
 
 ### Registering videos
 
-<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/sync_videos.py" target="_blank" rel="noopener noreferrer"><code>sync_videos.py</code></a> reads one row per video from `video_metadata.xlsx`, filled in manually per
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/sync_videos.py" target="_blank" rel="noopener noreferrer"><code>sync_videos.py</code></a> (<a href="#" data-lightbox-src="/portfolio/aquamind/stages/01-sync-videos-flow.svg" data-lightbox-alt="Internal call flow of sync_videos.py: video_metadata.xlsx and the video file on disk feed into a per-row loop; register_video calls get_video_fps_resolution to read real fps/resolution from the video file itself, then runs an INSERT ... ON DUPLICATE KEY UPDATE against MySQL's videos table, keyed on file_path, so re-running the script updates rather than duplicates.">flow diagram</a>) reads one row per video from `video_metadata.xlsx`, filled in manually per
 recording session: species, morph, tank dimensions, activity, fish count, and filming date, the
 experimental metadata that isn't in the video file itself. `fps` and
 `resolution` are not taken from the spreadsheet; they're read directly from
 the video with OpenCV, so they can't drift out of sync with the actual file.
 
 The insert is an upsert keyed on `file_path`, so re-running the script is safe: an already-registered video gets
-its metadata refreshed instead of duplicated
-(<a href="#" data-lightbox-src="/portfolio/aquamind/stages/01-sync-videos-flow.svg" data-lightbox-alt="Internal call flow of sync_videos.py: video_metadata.xlsx and the video file on disk feed into a per-row loop; register_video calls get_video_fps_resolution to read real fps/resolution from the video file itself, then runs an INSERT ... ON DUPLICATE KEY UPDATE against MySQL's videos table, keyed on file_path, so re-running the script updates rather than duplicates.">flow diagram</a>).
+its metadata refreshed instead of duplicated.
 
 ### Extracting frames
 
