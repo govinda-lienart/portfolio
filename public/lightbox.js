@@ -161,6 +161,21 @@
         api.open(image.dataset.full || image.currentSrc || image.src, image.alt);
       });
     });
+
+    // inline text links that open a diagram in the same lightbox without a visible
+    // thumbnail in the page — e.g. "sync_videos.py (flow diagram)". Marked with
+    // data-lightbox-src (the image to show) and optionally data-lightbox-alt.
+    var links = document.querySelectorAll(
+      ".sl-markdown-content a[data-lightbox-src]"
+    );
+    links.forEach(function (link) {
+      if (link.dataset.lightboxBound) return;
+      link.dataset.lightboxBound = "1";
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+        api.open(link.dataset.lightboxSrc, link.dataset.lightboxAlt || "");
+      });
+    });
   }
 
   if (document.readyState === "loading") {
