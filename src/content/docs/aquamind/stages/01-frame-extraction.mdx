@@ -128,26 +128,11 @@ Ingestion correctness was verified by querying `videos` and `frames` directly.
 
 ## Discussion
 
-Together, Stage 1's reproducible ingestion pipeline, deterministic H.264 decoding, lossless PNG
-frames on disk, and metadata split across the `videos` and `frames` tables form the foundational
-dataset layer that subsequent annotation, labelling, and object-detection model training build on.
-
-That said, the 1 FPS rule only governs this stage's own script, not the `frames` table itself.
-A later hard-negative-mining step, covered in Stage 2, adds more rows to the same table, but
-chooses its frames differently, at moments where the tracker flagged a fish crossing rather than
-at a fixed time interval.
-
-Recording at 60 FPS while storing only one frame per second isn't wasted effort, since the two
-serve different purposes. The `frames` table gives annotation and training a queryable,
-one-row-per-second dataset that's well suited to spot-checking and joining against labels. In
-addition, consecutive frames at 60 FPS are nearly identical, a fish barely moves in 1/60th of a
-second, so storing all of them would multiply disk usage roughly sixtyfold for little annotation
-value. The tracker needs the opposite: not a table to query, but every one of the 60 frames per
-second as continuous input, not looked up row by row.
-
-That's why [Stage 4](/aquamind/stages/04-tracker/) reads the raw video directly and computes
-tracks over the full frame sequence instead of going through SQL. Those tracks, not the raw
-frames, are the consumable: later interpretation stages work from the tracker's output, not from
-`frames`. With a structured, addressable frame set now in place, though,
-[Stage 2](/aquamind/stages/02-annotation/) takes on the next problem first: getting bounding boxes
-onto those frames.
+Stage 1 turns raw videos into a queryable dataset. Each video is registered once in a `videos`
+table, and its frames are decoded deterministically and saved as lossless PNGs, with one row per
+frame in a `frames` table. Frames are sampled at 1 per second by default (the rate is a script
+parameter), a deliberate compromise. Consecutive frames at 60 FPS are nearly identical, and every
+frame kept is one that must be labelled by hand, so a sparser sample gives more visual variety per
+hour of annotation. The result is what [Stage 2](/aquamind/stages/02-annotation/) needs: a clean,
+addressable set of frames to load into the labelling tool, and database rows that each bounding box
+can be joined back to.
