@@ -64,14 +64,16 @@ reproducible and comparable.
 
 <FigureSrc
   src="/aquamind/stages/05-detector-improvement-loop.svg"
-  alt="Stage 5 model-assisted detector improvement loop. The champion detector from Stage 3 and a tracker run log from Stage 4 are the inputs. extract_crossing_frames.py picks frames where two fish overlap (IoU above 0.4, one frame per crossing event) and extract_ghost_frames.py picks frames from the gaps where the tracker lost a fish (three evenly spaced frames per burst); both cut JPG frames from the raw video and write a sidecar file. In Label Studio, upload_labelstudio.py imports the frames as tasks, ml_backend.py pre-boxes them with the champion detector, and the boxes are corrected by hand, the only human step. download_labelstudio.py exports the corrected labels in YOLO format and store_annotations.py writes them to MySQL as a new annotation set plus its bounding boxes. prepare_dataset.py builds a training set from the chosen annotation sets, the detector is fine-tuned, and log_artifact_mlflow.py registers a new version and moves the champion alias to it. A dashed feedback arrow returns from the new champion to the start, because the next round mines the tracker's failures with the improved model."
-  caption="Stage 5 loop: the champion detector and a tracker log go in, two mining scripts cut the hard cases from the raw video, Label Studio pre-labels them with the champion for correction by hand (the only human step), the corrected boxes are stored as a new annotation set, and a retrained detector is registered as the new champion. Green boxes are scripts, orange is the human step, yellow is a file on disk, the cylinder is MySQL. Click to zoom."
+  alt="Stage 5 model-assisted detector improvement loop. The champion detector from Stage 3 and a raw video are the inputs. tracker.py runs the champion on the video and writes a run log of overlap events and lost-fish events. extract_crossing_frames.py picks frames where two fish overlap (IoU above 0.4, one frame per crossing event) and extract_ghost_frames.py picks frames from the gaps where the tracker lost a fish (three evenly spaced frames per burst); both cut JPG frames from the raw video and write a sidecar file. upload_labelstudio.py imports the frames into Label Studio as tasks and ml_backend.py loads the champion and pre-boxes every frame, then every box is corrected by hand, the only human step. download_labelstudio.py exports the corrected labels in YOLO format and store_annotations.py writes them to MySQL as a new annotation set plus its bounding boxes. prepare_dataset.py builds a training set from the chosen annotation sets, the detector is fine-tuned, and log_artifact_mlflow.py registers a new version and moves the champion alias to it. A dashed feedback arrow returns from the new champion to the start, because the next round runs the tracker with the improved model."
+  caption="Stage 5 loop: the tracker runs the champion detector and logs its failures, two mining scripts cut the hard cases from the raw video, ml_backend.py pre-labels them with the champion inside Label Studio for correction by hand (the only human step), the corrected boxes are stored as a new annotation set, and a retrained detector is registered as the new champion. Green boxes are scripts, orange is the human step, yellow is a file on disk, the cylinder is MySQL. Click to zoom."
 />
 
 ### Mining the tracker's failures
 
-Two scripts read a tracker run's log and cut frames from the raw video (never
-from a tracker output), so the frames are clean and unannotated.
+A round starts by running `tracker.py` with the current champion on a video, which
+writes a run log of every overlap and every lost-and-recovered fish. Two scripts
+then read that log and cut frames from the raw video (never from a tracker
+output), so the frames are clean and unannotated.
 
 - `extract_crossing_frames.py` reads the tracker's overlap events, each with a
   frame number and an IoU. It keeps the frames whose IoU is above `iou_threshold`
