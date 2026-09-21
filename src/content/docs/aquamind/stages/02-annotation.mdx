@@ -27,19 +27,21 @@ is the labelled-data layer the detector is trained on in Stage 3.
 
 ## Introduction
 
-A detector learns from images paired with labels, so the frames from Stage 1 now
-need labels: a bounding box around every visible fish. Drawing the boxes is manual
-work done in a labelling tool, and what the tool produces is a folder of text files.
-On their own, those files are hard to query. It is not possible to ask which frames
-are labelled, how many boxes a batch holds, or which video and sampling settings a
-box came from.
+A detector is only as good as its labels. For AquaMind, the labels are bounding boxes
+drawn by hand around every visible fish on the frames extracted in Stage 1, and they
+are a key input to the detector trained in Stage 3.
 
-Stage 2 therefore does two things. It sets up the labelling step, with Label Studio
-driven by scripts, and it stores the result relationally. It adds the last two of
-AquaMind's four MySQL tables (`annotations` and `annotation_sets`) next to the
-`videos` and `frames` tables from Stage 1. Each box links back to its frame with a
-foreign key, and each batch links back to its video, which lets Stage 3 build a
-training set from chosen batches instead of loose files.
+Labelling tools export these boxes as a folder of text files, one per image. That
+format is enough to train a model once, but it forgets where the labels came from:
+which video, which sampling of frames, which labelling session. Here that matters,
+because frames come from several sources, labels are added in rounds, and a model has
+to be retrained on chosen subsets. Without that link it is not possible to say which
+data a given model saw, or to rebuild a dataset later.
+
+Stage 2 therefore treats labels as data with a history. Each box is stored as a record
+linked to its frame, and each labelling round is recorded as a batch, so datasets are
+assembled by query instead of by copying folders. This chapter describes how the
+frames were labelled and stored, and Stage 3 then trains the detector on the result.
 
 ## Aim
 
