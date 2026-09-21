@@ -62,19 +62,10 @@ tables are set up first, then each script in turn.
 
 ### Setting up Label Studio
 
-Label Studio is used for manual annotation and runs as a Docker container, so nothing
-is installed locally beyond Docker Desktop. It uses the `heartexlabs/label-studio:latest`
-image, port 8080 is mapped to the host, and a volume mount gives it persistent
-storage: all annotation data is written to the local `mydata` folder on the host
-rather than inside the container, so the work survives a container restart.
-
-```bash
-docker run -it -p 8080:8080 -v $(pwd)/mydata:/label-studio/data heartexlabs/label-studio:latest
-```
-
-The upload and download scripts talk to Label Studio through its API. They read its
-address and API key from the `.env` file (`LABEL_STUDIO_URL` and
-`LABEL_STUDIO_API_KEY`) and run in the same `aquamind` Conda environment as Stage 1.
+Label Studio runs as a Docker container, so nothing is installed locally beyond Docker
+Desktop. A volume mount keeps its data in a local `mydata` folder on the host, so
+labelled work survives a container restart. The upload and download scripts talk to it
+through its API, using the address and key stored in the `.env` file.
 
 ### Setting up the tables
 
@@ -193,26 +184,13 @@ Seven labelling batches are stored, from three kinds of frame source:
 Frames that were uploaded but ended up with no stored box do not appear in
 `annotations`, so the frame counts here are frames that hold at least one box.
 
-The integrity checks are two joins and a range test:
-
-```sql
--- boxes whose frame does not exist
-SELECT COUNT(*) FROM annotations a
-LEFT JOIN frames f ON f.id = a.frame_id WHERE f.id IS NULL;
-
--- boxes that belong to no labelling batch
-SELECT COUNT(*) FROM annotations a
-LEFT JOIN annotation_sets s ON s.id = a.annotation_set_id WHERE s.id IS NULL;
-
--- boxes outside the normalised range
-SELECT COUNT(*) FROM annotations
-WHERE x_center NOT BETWEEN 0 AND 1 OR y_center NOT BETWEEN 0 AND 1
-   OR width <= 0 OR width > 1 OR height <= 0 OR height > 1;
-```
+Beyond the counts, the stored boxes were checked for a missing batch link and for
+coordinates outside the normalised range. A missing frame link is ruled out by the
+foreign key on `frame_id`. The class balance and the boxes per frame were read off the
+same tables:
 
 | Check | Result |
 |---|---|
-| Boxes with a frame that does not exist | 0 |
 | Boxes without a labelling batch | 0 |
 | Boxes outside the normalised range | 0 |
 | Boxes per class | 3,600 `danio_rerio`, 907 `reflection` |
