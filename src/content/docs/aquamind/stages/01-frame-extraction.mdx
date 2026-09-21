@@ -23,7 +23,7 @@ Stage 1 converts raw aquarium video into a structured, frame-level MySQL dataset
 two steps: each video is registered once, along with its metadata, in a MySQL `videos` table, then
 sampled at one frame per second into a `frames` table foreign-keyed back to
 it, so each frame stays traceable to the video it came from. The result is a reproducible ingestion layer: consistent
-1 FPS (frames per second) sampling, lossless PNG frames on disk, and structured metadata across
+1 FPS (frames per second) sampling, JPG frames on disk, and structured metadata across
 two relational tables in a Dockerised MySQL database, forming the foundation
 the annotation and training stages build on.
 </Abstract>
@@ -46,8 +46,8 @@ timestamp, so Stage 2's annotation work has something stable to label.
 
 <FigureSrc
   src="/aquamind/stages/01-frame-extraction-pipeline.svg"
-  alt="Stage 1 video-registration and frame-extraction pipeline. Raw aquarium video, recorded on an iPhone 14 at 60 FPS and switched from HEVC to H.264 after a colour-fidelity bug, is first registered by sync_videos.py, which reads video_metadata.xlsx and inserts one row per video into the MySQL videos table. extract_frames.py then normalises the reported frame rate with round() and samples one frame per second via frame_count modulo fps. Each selected frame produces two outputs: a lossless PNG file on disk, and a corresponding row in the MySQL frames table (frame_number, timestamp, frame_path, video_id foreign key). Both outputs converge into a single frame-indexed dataset that later stages reference by frame number and timestamp instead of re-decoding the source video, feeding forward into Stage 2's LabelStudio annotation step."
-  caption="Stage 1 pipeline: sync_videos.py registers each video in MySQL's videos table before extract_frames.py samples it at 1 FPS, producing two outputs per frame (a PNG on disk and a row in the frames table, foreign-keyed back to videos). The two outputs converge into the frame-indexed dataset every later stage builds on. Cylinders mark the two persistent MySQL tables; boxes mark scripts and file output. Click to zoom."
+  alt="Stage 1 video-registration and frame-extraction pipeline. Raw aquarium video, recorded on an iPhone 14 at 1080p and 60 FPS and switched from HEVC to H.264 after a colour-fidelity bug, is first registered by sync_videos.py, which reads video_metadata.xlsx and inserts one row per video into the MySQL videos table. extract_frames.py then cuts the video into still frames, by default one per second (the sample rate is set in config.yaml). Each selected frame produces two outputs: a JPG file on disk, and a corresponding row in the MySQL frames table (frame_number, timestamp, frame_path, video_id foreign key). Both outputs converge into a single frame-indexed dataset that later stages reference by frame number and timestamp instead of re-decoding the source video, feeding forward into Stage 2's LabelStudio annotation step."
+  caption="Stage 1 pipeline: sync_videos.py registers each video in MySQL's videos table before extract_frames.py samples it at 1 FPS, producing two outputs per frame (a JPG on disk and a row in the frames table, foreign-keyed back to videos). The two outputs converge into the frame-indexed dataset every later stage builds on. Cylinders mark the two persistent MySQL tables; boxes mark scripts and file output. Click to zoom."
 />
 
 ### Choosing a recording format
@@ -112,11 +112,13 @@ its metadata refreshed instead of duplicated.
 
 ### Extracting frames
 
-<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/extract_frames.py" target="_blank" rel="noopener noreferrer"><code>extract_frames.py</code></a> reads each video sequentially using OpenCV and
-selects exactly one frame per second (FPS rounded to handle iPhone's `59.94` reporting quirk). Each
-selected frame is saved as a lossless PNG to disk, preserving full pixel-level accuracy for
-annotation and machine-learning tasks downstream. In the same step, it's registered as a row in the
-`frames` table, storing its index, its timestamp, and the `frame_path` pointing back to the PNG.
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/extract_frames.py" target="_blank" rel="noopener noreferrer"><code>extract_frames.py</code></a> (<a href="#" data-lightbox-src="/portfolio/aquamind/stages/01-extract-frames-flow.svg" data-lightbox-alt="Internal flow of extract_frames.py: config and .env are read, a frame folder path is built, a MySQL connection is opened, and guardrails check that the video is registered and not already extracted. Every Nth frame is then read and saved to disk while all others are skipped, the kept frames are inserted into the frames table with INSERT IGNORE, and an extraction_params.yaml sidecar is written.">flow diagram</a>) reads each video sequentially using OpenCV and
+selects one frame per second by default (the sample rate is a config setting, and the reported FPS is
+rounded because iPhone videos report values slightly below 60, such as `59.78`). Each selected frame is
+saved as a JPG to disk. The source video is already H.264-compressed, so lossless PNGs would add file
+size without adding detail, and JPG is what LabelStudio and YOLO training read directly. In the same
+step, it's registered as a row in the `frames` table, storing its index, its timestamp, and the
+`frame_path` pointing back to the JPG.
 
 ## Results
 
@@ -124,12 +126,12 @@ Ingestion correctness was verified by querying `videos` and `frames` directly.
 
 <Figure src={videosTableSql} alt="Verification SQL query against the videos table" caption="Table videos: one row per registered recording, populated by sync_videos.py, with the experimental metadata (species, tank dimensions, filming date) and the fps/resolution values read directly from each video file." width={700} />
 
-<Figure src={sqlVerify} alt="Verification SQL table structure and inserts" caption="Table frames: sequential frame_number values, consistent one-second timestamp steps, valid frame_path references to the stored PNG frames, and correct separation between different extraction runs, each row foreign-keyed back to its parent video via video_id." width={700} />
+<Figure src={sqlVerify} alt="Verification SQL table structure and inserts" caption="Table frames: sequential frame_number values, consistent one-second timestamp steps, valid frame_path references to the stored JPG frames, and correct separation between different extraction runs, each row foreign-keyed back to its parent video via video_id." width={700} />
 
 ## Discussion
 
 Stage 1 turns raw videos into a queryable dataset. Each video is registered once in a `videos`
-table, and its frames are decoded deterministically and saved as lossless PNGs, with one row per
+table, and its frames are decoded deterministically and saved as JPGs, with one row per
 frame in a `frames` table. Frames are sampled at 1 per second by default (the rate is a script
 parameter), a deliberate compromise. Consecutive frames at 60 FPS are nearly identical, and every
 frame kept is one that must be labelled by hand, so a sparser sample gives more visual variety per
