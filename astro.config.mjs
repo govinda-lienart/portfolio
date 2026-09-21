@@ -53,7 +53,7 @@ export default defineConfig({
             { label: '1 · Frame extraction', link: '/aquamind/stages/01-frame-extraction/' },
             { label: '2 · Annotation', link: '/aquamind/stages/02-annotation/' },
             { label: '3 · Object detection', link: '/aquamind/stages/03-object-detection/' },
-            { label: '4 · Custom tracker & evaluation', link: '/aquamind/stages/04-tracker/' },
+            { label: '4 · Custom tracker', link: '/aquamind/stages/04-tracker/' },
             { label: '5 · Model-assisted annotation', link: '/aquamind/stages/05-model-assisted-annotation/' },
             { label: '6 · Re-identification', link: '/aquamind/stages/06-reid/' },
             { label: '7 · Chasing detection', link: '/aquamind/stages/07-chasing/' },
