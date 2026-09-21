@@ -114,5 +114,5 @@
     <line x1="438" y1="120" x2="450" y2="120"/>
   </g>
   <text class="rel" x="390" y="430">One video has many frames (1 : N): the crow's foot marks the "many" side, the bar marks "one".</text>
-  <text class="foot" x="390" y="452">Full DDL (all 5 project tables): aquamind_dump.sql on GitHub</text>
+  <text class="foot" x="390" y="452">Full DDL (all 4 project tables): schema.sql on GitHub</text>
 </svg>

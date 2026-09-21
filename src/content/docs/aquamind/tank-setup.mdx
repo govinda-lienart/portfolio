@@ -35,8 +35,8 @@ switched to H.264 ("Most Compatible" mode) for deterministic decoding. See
 
 ## Database
 
-A MySQL database (`aquamind`) holds five tables (`videos`, `frames`,
-`annotation_sets`, `annotations` and `tracks`) running in a Docker container. The
-`tracks` table is self-sufficient (it stores `frame_number`, `timestamp` and
-`video_id` directly), so behaviour analysis reads it without joining back to
-`frames`.
+A MySQL database (`aquamind`) holds four tables (`videos`, `frames`,
+`annotation_sets` and `annotations`) running in a Docker container. Tracker output
+is not stored there. The tracker first wrote tracks to a MySQL `tracks` table, then
+switched to one `tracks.parquet` file per run, which keeps each run self-contained
+next to its crops and config and loads straight into pandas for behaviour analysis.

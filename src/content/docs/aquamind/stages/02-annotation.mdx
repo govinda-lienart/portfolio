@@ -47,6 +47,12 @@ later re-labelling are all queryable rather than living only in flat files.
 
 ## Methods
 
+<FigureSrc
+  src="/aquamind/stages/02-annotation-pipeline.svg"
+  alt="Stage 2 annotation and label-storage pipeline. The frame-indexed dataset from Stage 1 (JPG frames on disk plus rows in the MySQL frames table) is imported into Label Studio, running in Docker, where every visible fish is boxed by hand. download_labelstudio.py exports the labelled project in YOLO format, producing one text file per frame with one line per bounding box (class, x centre, y centre, width, height, normalised between 0 and 1). store_annotations.py parses each label file, looks up the matching frame_id in the frames table, reads the sidecar files (extraction_params.yaml and download_params.yaml) for provenance, and writes two kinds of rows to MySQL: one row per labelling batch in annotation_sets, and one row per bounding box in annotations, foreign-keyed to both its frame and its batch. Both outputs converge into a labelled dataset in which every box is traceable to its frame and its labelling batch, feeding forward into Stage 3's YOLO training."
+  caption="Stage 2 pipeline: frames from Stage 1 are labelled by hand in Label Studio (the only human step), exported in YOLO format, and stored by store_annotations.py as one annotation_sets row per labelling batch plus one annotations row per bounding box, each foreign-keyed back to its frame. The sidecar files written by the earlier scripts record where each batch came from. Cylinders mark MySQL tables, boxes mark scripts, tools and files. Click to zoom."
+/>
+
 ### Environment setup
 
 The same `aquamind` Conda environment from Stage 1 is used. No additional Python
@@ -71,7 +77,7 @@ docker run -it -p 8080:8080 -v $(pwd)/mydata:/label-studio/data heartexlabs/labe
 Inside Label Studio, a new project named *AquaMind* is created. The labelling
 interface is configured under Settings → Labelling Interface: the Computer Vision
 category, the *Object Detection with Bounding Boxes* template, and a single label
-class `danio_rerio_golden`. All extracted PNG frames from Stage 1 are imported as
+class `danio_rerio_golden`. All extracted JPG frames from Stage 1 are imported as
 individual tasks.
 
 Each frame is opened individually and a bounding box is drawn around every visible
@@ -126,9 +132,25 @@ CREATE TABLE annotations (
 );
 ```
 
+### Batch provenance: `annotation_sets`
+
+Later in the project, once frames came from more than one source, each labelling batch got its own
+row in an `annotation_sets` table, and `annotations` gained an `annotation_set_id` foreign key next
+to `frame_id`. One row records where a batch came from and how it was labelled: the video
+(`video_id`), the `frame_source` (`regular`, `crossing_event` or `ghosting_event`), the sampling
+parameters (`sample_rate`, `start_seconds`, `end_seconds`, `frames_extracted`, plus `iou_threshold`
+and `dedup_window` for crossing-event batches), and the Label Studio project (`ls_project_name`,
+`ls_project_id`, `ls_downloaded_at` and the task-id range).
+
+`store_annotations.py` fills it from two sidecar files: `extraction_params.yaml`, written next to the
+frames by the extraction script (Stage 1), and `download_params.yaml`, written next to the export by
+`download_labelstudio.py`. Every box can then answer which video, which sampling and which Label
+Studio download it came from, and Stage 3 can build a training set by choosing annotation sets
+rather than loose files.
+
 ### Annotation-storage pipeline
 
-**Design overview.** <a href="https://github.com/govinda-lienart/AquaMind/blob/main/store_annotations.py" target="_blank" rel="noopener noreferrer"><code>store_annotations.py</code></a> iterates over every `.txt` file in the exported
+**Design overview.** <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/store_annotations.py" target="_blank" rel="noopener noreferrer"><code>store_annotations.py</code></a> iterates over every `.txt` file in the exported
 `labels/` folder. For each file the frame number is parsed from the filename,
 used to retrieve the `frame_id` from the `frames` table, and each bounding box is
 inserted as a record into `annotations`.
