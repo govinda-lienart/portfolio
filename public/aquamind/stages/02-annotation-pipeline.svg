@@ -1,6 +1,6 @@
 <svg width="100%" viewBox="0 0 780 964" role="img" xmlns="http://www.w3.org/2000/svg">
   <title>Stage 2 — hand-labelling, YOLO export and relational annotation storage pipeline</title>
-  <desc>The frame-indexed dataset from Stage 1 (JPG frames on disk plus rows in the MySQL frames table) is uploaded by upload_labelstudio.py into a new Label Studio project, running in Docker, where every visible fish is boxed by hand. download_labelstudio.py exports the labelled project in YOLO format, producing one text file per frame with one line per bounding box (class, x centre, y centre, width, height, normalised between 0 and 1). store_annotations.py parses each label file, looks up the matching frame_id in the frames table, reads the sidecar files (extraction_params.yaml and download_params.yaml) for provenance, and writes two kinds of rows to MySQL: one row per labelling batch in annotation_sets, and one row per bounding box in annotations, foreign-keyed to both its frame and its batch. Both outputs converge into a labelled dataset in which every box is traceable to its frame and its labelling batch, feeding forward into Stage 3's YOLO training.</desc>
+  <desc>The frame-indexed dataset from Stage 1 (JPG frames on disk plus rows in the MySQL frames table) is uploaded by upload_labelstudio.py into a new Label Studio project, running in Docker, where every visible fish is boxed by hand. download_labelstudio.py exports the labelled project in YOLO format, producing one text file per frame with one line per bounding box (class, x centre, y centre, width, height, normalised between 0 and 1). store_annotations.py parses each label file, looks up the matching frame_id in the frames table (the MySQL table from Stage 1, drawn to the left of the script), reads the sidecar files (extraction_params.yaml and download_params.yaml) for provenance, and writes two kinds of rows to MySQL: one row per labelling batch in annotation_sets, and one row per bounding box in annotations, foreign-keyed to both its frame and its batch. Both outputs converge into a labelled dataset in which every box is traceable to its frame and its labelling batch, feeding forward into Stage 3's YOLO training.</desc>
   <defs>
     <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -72,6 +72,14 @@
   <text class="name" x="677" y="466">sidecar files</text>
   <text class="desc" x="677" y="484">extraction_params.yaml</text>
   <text class="desc" x="677" y="500">download_params.yaml</text>
+
+  <!-- frames table (from Stage 1): looked up to turn a frame number into a frame_id -->
+  <path class="cyl" d="M 20,452 L 20,506 A 65,10 0 0 0 150,506 L 150,452 A 65,10 0 0 0 20,452 Z" fill="#d0e0e3" stroke="#45818e"/>
+  <ellipse class="cyl" cx="85" cy="452" rx="65" ry="10" fill="#d0e0e3" stroke="#45818e"/>
+  <text class="name" x="85" y="478">frames (MySQL)</text>
+  <text class="desc" x="85" y="494">from Stage 1</text>
+  <polyline points="152,479 208,479" fill="none" stroke="#45818e" stroke-width="1.5" marker-end="url(#arrow2)"/>
+  <text class="tiny" x="180" y="471">frame_id</text>
 
   <!-- annotation_sets table (cylinder) -->
   <path class="cyl" d="M 60,568 L 60,634 A 140,14 0 0 0 340,634 L 340,568 A 140,14 0 0 0 60,568 Z" fill="#d0e0e3" stroke="#45818e"/>
