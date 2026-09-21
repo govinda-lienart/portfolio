@@ -30,12 +30,21 @@ the annotation and training stages build on.
 
 ## Introduction
 
-Annotation, which entails drawing bounding boxes for object detection, needs still, addressable images, not a
-continuously playing video. Therefore the video is extracted and stored as frames, and bounding boxes are drawn on those frames.
-Each frame must be findable again by frame number later, when its annotation is associated to it and stored.
-Stage 1 builds that addressable image set: it establishes the first two of AquaMind's four MySQL tables (`videos`
-and `frames`) and a script that samples at a standard one-frame-per-second rate, spaced widely enough to capture
-varied fish positions, which Stage 2's annotation work and Stage 3's YOLO training dataset are built on.
+AquaMind measures fish behaviour from video, but the first model in the pipeline, the
+object detector, learns from still images, not from a continuously playing file.
+Bounding boxes are drawn on single frames, and each label must be attached to the
+frame it belongs to, so frames need to be findable again later by frame number.
+
+A folder of image files does not give that. It says nothing about which video a frame
+came from, what the tank and the fish were like when it was filmed, or at what rate
+it was sampled, and those details are needed later to interpret a model's results and
+to rebuild a dataset. There is also a matter of scale: at 60 frames per second a video
+holds thousands of near-identical frames, and every frame that is kept has to be
+labelled by hand, so how many to keep matters.
+
+Stage 1 therefore turns each raw video into a small, addressable set of frames, with
+its metadata stored once and linked to every frame. This chapter describes how the
+videos were recorded, registered and sampled, and Stage 2 then labels the result.
 
 ## Aim
 
