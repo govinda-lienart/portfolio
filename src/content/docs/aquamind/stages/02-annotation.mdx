@@ -43,10 +43,9 @@ training set from chosen batches instead of loose files.
 
 ## Aim
 
-Produce a labelled dataset a detector can train on: every visible fish boxed by
-hand, exported in a training-ready format (YOLO), and stored as relational rows that
-trace back to their source frame, so coverage, provenance and later relabelling can
-all be queried instead of living only in flat files.
+Produce a hand-labelled dataset, stored in a relational database, in which every box
+is traceable to its frame, labelling batch and video, as the source for training the
+object detector in Stage 3.
 
 ## Methods
 
