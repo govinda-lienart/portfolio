@@ -1,5 +1,5 @@
 ---
-title: "Stage 6 · Chasing detection"
+title: "Stage 7 · Chasing detection"
 description: "Pairwise kinematic features and a TCPA collision-avoidance detector, built up from per-fish metrics to labelled chase events."
 ---
 
@@ -8,12 +8,12 @@ import PaperHeader from '../../../../components/PaperHeader.astro';
 
 <PaperHeader
   subtitle="Pairwise kinematic features and a TCPA collision-avoidance detector, built up from per-fish metrics to labelled chase events."
-  venue="AquaMind · Stage 6"
+  venue="AquaMind · Stage 7"
   meta="TCPA candidate detector · LR/RF/XGBoost baselines · fixed-window & whole-event LSTM"
 />
 
 <Abstract>
-Stage 6 detects chasing — a core dominance behaviour in the chemical-alarm-cue
+Stage 7 detects chasing — a core dominance behaviour in the chemical-alarm-cue
 antipredator assay this project is built around — starting from basic per-fish
 kinematics and building up to pairwise features, labelled events, and trained
 classifiers. The key engineering idea is **TCPA (time to closest point of
@@ -38,7 +38,7 @@ numbers) are still pending write-up. See the
 
 Chasing/dominance is one of the behaviours this project's chemical-alarm-cue
 antipredator assay is built to measure — the same kind of behaviour hand-scored
-during the PhD work this project automates. Unlike Stage 5's per-fish tracking
+during the PhD work this project automates. Unlike Stage 6's per-fish tracking
 problem, chasing is inherently **pairwise**: it's defined by the relationship
 between two fish, not by either one's motion alone.
 
@@ -138,6 +138,6 @@ The precision-over-recall choice in Phase E is also worth calling out
 explicitly: it's not a generic classifier default, it's a direct consequence of
 what a false positive costs in this specific scientific context. Phase G
 (overlay, per-fish counters, an automated report) is deliberately built last —
-[Stage 7](/portfolio/aquamind/stages/07-feeding-strike/)'s feeding-strike work already showed that an overlay-level sanity check
+[Stage 8](/portfolio/aquamind/stages/08-feeding-strike/)'s feeding-strike work already showed that an overlay-level sanity check
 can surface problems balanced-window metrics hide, so the same discipline
 applies here once Results above is filled in.

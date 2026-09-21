@@ -33,7 +33,13 @@ npm run preview
 - **`/aquamind/*` article section** — light, PLOS/MkDocs "reading room" via Starlight +
   `src/styles/plos.css`: numbered sections, journal-blue links, serif body. Content lives in
   `src/content/docs/aquamind/`, one MDX/MD file per pipeline stage (`stages/01-frame-extraction.mdx`
-  … `08-deployment.md`), plus `index.mdx`, `architecture/`, `discussion.md`, `tank-setup.mdx`.
+  … `09-deployment.md`), plus `index.mdx`, `architecture/`, `discussion.md`, `tank-setup.mdx`.
+  **Stage numbering (2026-09-21):** `05-detector-improvement.mdx` was inserted after the tracker, so
+  re-ID, chasing, feeding-strike and deployment moved from 05-08 to 06-09. The old URLs redirect via
+  `redirects` in `astro.config.mjs`. Asset filenames were NOT renamed (e.g. `08-feeding-strike-*.svg`
+  keeps its old prefix). The site's numbering differs from AquaMind's internal `CLAUDE.md` / `docs/diary.md`
+  numbering (that scheme has its own Stage 5 = tracker evaluation, 6 = re-ID, 7 = chasing, 8 = feeding
+  strike); "`diary.md`'s Stage N section" references on the pages point at that internal scheme on purpose.
 
 ## Components (`src/components/`)
 - **`Figure.astro`** — numbered "Fig N." caption (CSS counter), takes an Astro-optimized

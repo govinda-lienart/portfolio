@@ -1,5 +1,5 @@
 ---
-title: "Stage 7 · Feeding-strike detection"
+title: "Stage 8 · Feeding-strike detection"
 description: "Feeding-strike detection: classical and deep learning both fail, a simple burst signal still helps"
 ---
 
@@ -10,7 +10,7 @@ import VideoSrc from '../../../../components/VideoSrc.astro';
 
 <PaperHeader
   subtitle="Feeding-strike detection: classical and deep learning both fail, a simple burst signal still helps"
-  venue="AquaMind · Stage 7"
+  venue="AquaMind · Stage 8"
   date="September 2026"
   meta="Video: IMG_2349.MOV (4-5 fish, food-injection segment) · 118 labelled strikes"
 />
@@ -80,7 +80,7 @@ image crops.
 
 ## Methods
 
-Stage 7 trains a per-fish feeding-strike classifier from a set of hand-labelled
+Stage 8 trains a per-fish feeding-strike classifier from a set of hand-labelled
 strike events. Two approaches are compared on an identical set of windows: a
 geometry baseline built from movement alone, and a CNN-LSTM built from the fish's
 appearance. The appearance model is the one of interest, because a feeding strike
@@ -91,8 +91,8 @@ input.
 
 <FigureSrc
   src="/aquamind/stages/08-feeding-strike-pipeline.svg"
-  alt="Stage 7 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives from the sand-injection control segment. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping), reaching 64 percent accuracy on the balanced test split. That trained model then feeds infer_feeding.py, a negative control that runs it as a sliding-window classifier over full sand and food phases of the same recording: it calls a strike on 46 percent of no-food windows versus 64 percent of real-feeding windows, mean P(strike) 0.48 versus 0.60, showing the balanced accuracy figure does not hold on a realistic stream. Because neither the geometry baseline nor the CNN-LSTM survives that stream test, an arrow leads from the negative-control result down to a fallback box: render_feeding_burst_overlay.py, a purely descriptive per-fish burst-rate metric compared pooled across the control and feeding phases, with no per-strike claim. Accuracy figures are reported in the Results section."
-  caption="Stage 7 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two approaches compared on identical data, a geometry baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; the trained model is then stream-tested by infer_feeding.py, a negative control that lands near chance as well. Because neither approach survives that test, it falls back to a descriptive burst-rate metric (purple) rather than another classifier. Performance figures are in Results. Click to zoom."
+  alt="Stage 8 feeding-strike pipeline. Two upstream inputs (tracks.parquet with per-fish crops from the Stage 4 tracker run, and feeding_labels.xlsx with 118 strikes labelled in Phase A) feed build_feeding_windows_fixed_window.py, which builds fixed 45-frame windows with count-matched negatives from the sand-injection control segment. The windows fork into two pipelines. Left: a geometry-only baseline, train_feeding_classifier.py, running logistic regression, random forest and XGBoost on kinematic features; it lands near chance, which is the evidence that appearance features are needed. Right: a CNN-LSTM fixed-window pipeline (build_feeding_crops_fixed_window.py, then build_feeding_embeddings_fixed_window.py running a frozen DINOv2 vits14 backbone to a per-frame embedding, then train_feeding_lstm_fixed_window.py training an LSTM over the embedding sequence with early stopping), reaching 64 percent accuracy on the balanced test split. That trained model then feeds infer_feeding.py, a negative control that runs it as a sliding-window classifier over full sand and food phases of the same recording: it calls a strike on 46 percent of no-food windows versus 64 percent of real-feeding windows, mean P(strike) 0.48 versus 0.60, showing the balanced accuracy figure does not hold on a realistic stream. Because neither the geometry baseline nor the CNN-LSTM survives that stream test, an arrow leads from the negative-control result down to a fallback box: render_feeding_burst_overlay.py, a purely descriptive per-fish burst-rate metric compared pooled across the control and feeding phases, with no per-strike claim. Accuracy figures are reported in the Results section."
+  caption="Stage 8 pipeline: from the reused tracker outputs and the strike labels, through fixed 45-frame windows, to two approaches compared on identical data, a geometry baseline (pink) and the CNN-LSTM (green scripts, orange model). The baseline landing near chance is what motivates the appearance model; the trained model is then stream-tested by infer_feeding.py, a negative control that lands near chance as well. Because neither approach survives that test, it falls back to a descriptive burst-rate metric (purple) rather than another classifier. Performance figures are in Results. Click to zoom."
 />
 
 ### Data
@@ -450,7 +450,7 @@ anyone outside a single recording has reason to trust it. That is the
 natural next step for per-strike detection too, treated as still open rather
 than closed: a movement-based feature set richer than raw speed, closer to
 the bearing and lagged path-following features already scoped for the
-chasing classifier in Stage 6, combined with the burst signal and its pooled
+chasing classifier in Stage 7, combined with the burst signal and its pooled
 threshold, is a more promising direction than a bigger appearance model on
 the same crops. None of that is built or claimed here; it is the concrete
 direction this negative result points toward, needing considerably more

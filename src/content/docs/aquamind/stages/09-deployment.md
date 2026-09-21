@@ -1,5 +1,5 @@
 ---
-title: "Stage 8 · Pipeline and deployment"
+title: "Stage 9 · Pipeline and deployment"
 description: "One trained classifier behind FastAPI, Dockerised, on a single cloud host."
 ---
 

@@ -1,0 +1,116 @@
+<svg width="100%" viewBox="0 0 780 930" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Stage 5 — model-assisted detector improvement loop</title>
+  <desc>A manual improvement loop for the fish detector. The champion detector from Stage 3 and a tracker run log from Stage 4 are the inputs. extract_crossing_frames.py picks the frames where two fish overlap (IoU above 0.4, one frame per crossing event) and extract_ghost_frames.py picks frames from the gaps where the tracker lost a fish (three evenly spaced frames per burst); both cut JPG frames from the raw video and write a sidecar file. In Label Studio, upload_labelstudio.py imports the frames as tasks, ml_backend.py pre-boxes them with the champion detector, and the boxes are corrected by hand, which is the only human step. download_labelstudio.py exports the corrected labels in YOLO format and store_annotations.py writes them to MySQL as a new annotation set (frame source crossing_event or ghosting_event) plus its bounding boxes. prepare_dataset.py builds a training set from the chosen annotation sets, the detector is fine-tuned, and log_artifact_mlflow.py registers a new version and moves the champion alias to it. A dashed feedback arrow returns from the new champion to the start, because the tracker and the ML backend both load the champion alias, so the next round mines the tracker's failures with the improved model.</desc>
+  <defs>
+    <marker id="arrow5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-anchor: middle; }
+      .d-title { font-size: 15px; font-weight: 700; fill: #111; }
+      .d-sub { font-size: 11px; fill: #666; }
+      .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; font-weight: 600; fill: #1a1a1a; }
+      .desc { font-size: 11px; fill: #4a4a4a; }
+      .prov { font-size: 9.5px; font-weight: 700; fill: #5b7aa8; letter-spacing: 0.5px; }
+      .prov-h { font-size: 9.5px; font-weight: 700; fill: #b5651d; letter-spacing: 0.5px; }
+      .res { font-size: 12px; font-weight: 700; fill: #2f5a8a; }
+      .note { font-size: 10.5px; font-style: italic; fill: #2f5a8a; }
+      .loop { font-size: 10.5px; font-style: italic; fill: #6d28d9; }
+      .tiny { font-size: 9px; fill: #9a9a9a; }
+      .legend { font-size: 10px; fill: #555; text-anchor: start; }
+      .box { stroke-width: 1.5; }
+      .cyl { stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="780" height="930" fill="#ffffff"/>
+
+  <text class="d-title" x="390" y="26">Stage 5 — Model-assisted Detector Improvement Loop</text>
+  <text class="d-sub" x="390" y="44">manual, failure-driven · one pass per round · YOLO champion + tracker log in, better champion out</text>
+
+  <!-- inputs from Stages 3 and 4 -->
+  <rect class="box" x="50" y="60" width="680" height="72" rx="8" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="4 3"/>
+  <text class="prov" x="390" y="80">FROM STAGES 3 + 4</text>
+  <text class="name" x="390" y="100">Champion detector + tracker run log</text>
+  <text class="desc" x="390" y="118">YOLO @champion (Stage 3) · overlap and lost-fish events from the tracker (Stage 4)</text>
+
+  <!-- failure mining: two scripts -->
+  <rect class="box" x="60" y="160" width="320" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="220" y="184">extract_crossing_frames.py</text>
+  <text class="desc" x="220" y="204">crossings: IoU above 0.4, one frame per event</text>
+
+  <rect class="box" x="400" y="160" width="320" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="560" y="184">extract_ghost_frames.py</text>
+  <text class="desc" x="560" y="204">lost fish: 3 frames per lost-to-recovered gap</text>
+
+  <!-- hard-case frames -->
+  <rect class="box" x="210" y="254" width="360" height="56" rx="8" fill="#fff2cc" stroke="#d6b656"/>
+  <text class="name" x="390" y="278">Hard-case frames (.jpg)</text>
+  <text class="desc" x="390" y="296">cut from the raw video · sidecar file · registered in MySQL</text>
+
+  <!-- Label Studio: the human step -->
+  <rect class="box" x="210" y="340" width="360" height="92" rx="8" fill="#fce5cd" stroke="#e69138"/>
+  <text class="prov-h" x="390" y="358">HUMAN STEP</text>
+  <text class="name" x="390" y="377">Label Studio</text>
+  <text class="desc" x="390" y="396">upload_labelstudio.py imports the frames as tasks</text>
+  <text class="desc" x="390" y="411">ml_backend.py pre-boxes them with the champion</text>
+  <text class="desc" x="390" y="426">every box is corrected by hand</text>
+
+  <!-- export + store -->
+  <rect class="box" x="170" y="462" width="440" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="390" y="486">download_labelstudio.py → store_annotations.py</text>
+  <text class="desc" x="390" y="506">YOLO export → one new annotation set plus its boxes</text>
+
+  <!-- MySQL cylinder -->
+  <path class="cyl" d="M 190,568 L 190,628 A 200,14 0 0 0 590,628 L 590,568 A 200,14 0 0 0 190,568 Z" fill="#d0e0e3" stroke="#45818e"/>
+  <ellipse class="cyl" cx="390" cy="568" rx="200" ry="14" fill="#d0e0e3" stroke="#45818e"/>
+  <text class="name" x="390" y="592">annotation_sets + annotations (MySQL)</text>
+  <text class="desc" x="390" y="610">frame_source: crossing_event or ghosting_event</text>
+
+  <!-- retrain + register -->
+  <rect class="box" x="170" y="672" width="440" height="76" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="390" y="696">prepare_dataset.py → YOLO fine-tune</text>
+  <text class="desc" x="390" y="715">train on the chosen annotation_set_ids, log the run to MLflow</text>
+  <text class="desc" x="390" y="732">log_artifact_mlflow.py registers a version, moves @champion</text>
+
+  <!-- result -->
+  <rect class="box" x="190" y="778" width="400" height="80" rx="8" fill="#dbe9f6" stroke="#5b7aa8"/>
+  <text class="res" x="390" y="803">New champion detector</text>
+  <text class="desc" x="390" y="823">tracker.py and ml_backend.py load @champion, so nothing is edited</text>
+  <text class="note" x="390" y="846">→ next round: mine the tracker's failures again</text>
+
+  <!-- edges -->
+  <g fill="none" stroke="#555" stroke-width="1.5">
+    <polyline points="390,132 390,146 220,146 220,158" marker-end="url(#arrow5)"/>
+    <polyline points="390,132 390,146 560,146 560,158" marker-end="url(#arrow5)"/>
+    <polyline points="220,224 220,238 390,238 390,252" marker-end="url(#arrow5)"/>
+    <polyline points="560,224 560,238 390,238 390,252" marker-end="url(#arrow5)"/>
+    <polyline points="390,310 390,338" marker-end="url(#arrow5)"/>
+    <polyline points="390,432 390,460" marker-end="url(#arrow5)"/>
+    <polyline points="390,526 390,552" marker-end="url(#arrow5)"/>
+    <polyline points="390,642 390,670" marker-end="url(#arrow5)"/>
+    <polyline points="390,748 390,776" marker-end="url(#arrow5)"/>
+  </g>
+
+  <!-- feedback loop back to the start -->
+  <polyline points="592,818 752,818 752,96 732,96" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow5)"/>
+  <text class="loop" x="0" y="0" transform="translate(768 457) rotate(-90)">feedback: the improved champion is what the next round starts from</text>
+
+  <!-- legend -->
+  <g>
+    <rect x="30" y="895" width="11" height="11" rx="2" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="3 2"/>
+    <text class="legend" x="47" y="904">from Stages 3 + 4</text>
+    <rect x="160" y="895" width="11" height="11" rx="2" fill="#d5e8d4" stroke="#82b366"/>
+    <text class="legend" x="177" y="904">script step</text>
+    <rect x="255" y="895" width="11" height="11" rx="2" fill="#fce5cd" stroke="#e69138"/>
+    <text class="legend" x="272" y="904">human step</text>
+    <rect x="350" y="895" width="11" height="11" rx="2" fill="#fff2cc" stroke="#d6b656"/>
+    <text class="legend" x="367" y="904">disk file</text>
+    <rect x="430" y="895" width="11" height="11" rx="2" fill="#d0e0e3" stroke="#45818e"/>
+    <text class="legend" x="447" y="904">MySQL table</text>
+    <rect x="530" y="895" width="11" height="11" rx="2" fill="#dbe9f6" stroke="#5b7aa8"/>
+    <text class="legend" x="547" y="904">result</text>
+    <line x1="600" y1="900" x2="626" y2="900" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text class="legend" x="632" y="904">feedback loop</text>
+  </g>
+</svg>

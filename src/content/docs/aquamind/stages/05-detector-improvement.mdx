@@ -1,0 +1,185 @@
+---
+title: "Stage 5 · Model-assisted detector improvement"
+description: "The detector's own failures choose which frames to relabel, the detector pre-labels them for correction, and each round trains a better detector."
+---
+
+import Abstract from '../../../../components/Abstract.astro';
+import FigureSrc from '../../../../components/FigureSrc.astro';
+import PaperHeader from '../../../../components/PaperHeader.astro';
+
+<PaperHeader
+  subtitle="The detector's own failures choose the frames to relabel, and the detector pre-labels them, so each round trains a better detector."
+  venue="AquaMind · Stage 5"
+  meta="crossing + ghosting frames · Label Studio ML backend · MLflow registry (@champion) · run by hand"
+/>
+
+<Abstract>
+Stage 4 ended on a finding: identity switches at crossings trace back to the
+detector, so the fix is in the labels. Stage 5 acts on it with a manual improvement loop. The
+tracker's own logs are mined for the frames where the detector struggled (two
+fish overlapping, a fish dropped for a while), those frames are cut from the raw
+video, the current champion detector pre-labels them inside Label Studio, and
+the boxes are corrected by hand. The corrected labels go back into MySQL as new
+annotation sets and the detector is retrained. The model registry holds three
+distinct versions that mark successive rounds (v1, v3 and v5): validation mAP50
+rose from 0.78 to 0.85 and recall from 0.80 to 0.87 as crossing and ghosting
+frames were added. Those numbers come from validation sets that grew between
+versions, so they are suggestive rather than a controlled comparison; a fixed
+held-out comparison is the next step.
+</Abstract>
+
+## Introduction
+
+[Stage 4](/portfolio/aquamind/stages/04-tracker/) concluded that its tracker-side
+fixes were patches for a detector-side problem: when two fish overlap, the
+detector merges them into one box, and when a fish is half hidden it can return
+no box at all, which the tracker sees as a lost fish. A detector trained mostly
+on regular one-frame-per-second samples has seen few examples of exactly those
+cases, because they are rare in a random sample.
+
+So instead of labelling more frames at random, this stage labels the frames the
+current detector gets wrong. They are cheap to find, because the tracker already
+logs every overlap and every lost-and-recovered fish. The detector helps in a
+second way: it pre-labels the chosen frames inside Label Studio, so each one
+arrives already boxed and only needs correcting.
+
+This is a loop and not a single step. It reads the champion model from
+[Stage 3](/portfolio/aquamind/stages/03-object-detection/) and a tracker run from
+Stage 4, it uses the annotation tooling of
+[Stage 2](/portfolio/aquamind/stages/02-annotation/), and it hands a retrained
+detector back to Stage 3. It sits before
+[re-identification](/portfolio/aquamind/stages/06-reid/) because a detector that
+drops fewer fish also gives the appearance model cleaner crops. Every step is run
+by hand. It is a manual, failure-driven form of hard-example mining with
+model-assisted labelling, and automating it is possible future work, not
+something claimed here.
+
+## Aim
+
+Show that targeted, failure-driven relabelling improves the detector, and record
+exactly which data each model version was trained on, so that every round is
+reproducible and comparable.
+
+## Methods
+
+<FigureSrc
+  src="/aquamind/stages/05-detector-improvement-loop.svg"
+  alt="Stage 5 model-assisted detector improvement loop. The champion detector from Stage 3 and a tracker run log from Stage 4 are the inputs. extract_crossing_frames.py picks frames where two fish overlap (IoU above 0.4, one frame per crossing event) and extract_ghost_frames.py picks frames from the gaps where the tracker lost a fish (three evenly spaced frames per burst); both cut JPG frames from the raw video and write a sidecar file. In Label Studio, upload_labelstudio.py imports the frames as tasks, ml_backend.py pre-boxes them with the champion detector, and the boxes are corrected by hand, the only human step. download_labelstudio.py exports the corrected labels in YOLO format and store_annotations.py writes them to MySQL as a new annotation set plus its bounding boxes. prepare_dataset.py builds a training set from the chosen annotation sets, the detector is fine-tuned, and log_artifact_mlflow.py registers a new version and moves the champion alias to it. A dashed feedback arrow returns from the new champion to the start, because the next round mines the tracker's failures with the improved model."
+  caption="Stage 5 loop: the champion detector and a tracker log go in, two mining scripts cut the hard cases from the raw video, Label Studio pre-labels them with the champion for correction by hand (the only human step), the corrected boxes are stored as a new annotation set, and a retrained detector is registered as the new champion. Green boxes are scripts, orange is the human step, yellow is a file on disk, the cylinder is MySQL. Click to zoom."
+/>
+
+### Mining the tracker's failures
+
+Two scripts read a tracker run's log and cut frames from the raw video (never
+from a tracker output), so the frames are clean and unannotated.
+
+- `extract_crossing_frames.py` reads the tracker's overlap events, each with a
+  frame number and an IoU. It keeps the frames whose IoU is above `iou_threshold`
+  (0.4) and thins them with `dedup_window` (5 frames) so each crossing event
+  yields one frame and not a run of near-identical ones.
+- `extract_ghost_frames.py` pairs each `occlusion_lost` event with the
+  `occlusion_recovery` that follows it. The frames in between are a gap where a
+  fish had no box. Consecutive gap frames are merged into bursts, and `per_burst`
+  (3) evenly spaced frames are sampled from each burst.
+
+Some ghost gaps are genuine occlusions, such as a fish behind the plant, and not
+detector misses. The labelling step is where that gets decided: a frame is only
+useful if a fish is actually visible in it.
+
+Both scripts write an `extraction_params.yaml` sidecar recording the frame source
+(`crossing_event` or `ghosting_event`) and the thresholds used, and register the
+frames in the MySQL `frames` table so the labels can be linked back to them.
+
+### Pre-labelling with the current detector
+
+`upload_labelstudio.py` creates a Label Studio project and imports a frames folder
+as tasks. `ml_backend.py` is a small server that implements Label Studio's ML
+backend API. It loads `models:/aquamind-yolo-detector@champion` through
+`model_registry.load_yolo()`, the same resolver the tracker uses, and returns YOLO
+boxes for the two classes (`danio_rerio` and `reflection`). Running *Predict All*
+in the project settings pre-boxes every frame, and each one is then corrected by
+hand.
+
+Pre-labelling changes how fast the labelling goes, not which frames are chosen.
+Its effect on labelling time has not been measured.
+
+### Storing the labels, retraining, promoting
+
+`download_labelstudio.py` exports the corrected project in YOLO format, and
+`store_annotations.py` writes it to MySQL as a new row in `annotation_sets`
+(recording the frame source, sampling parameters and Label Studio project, see
+[Stage 2](/portfolio/aquamind/stages/02-annotation/)) plus one `annotations` row
+per box. `prepare_dataset.py` then builds a training set from a chosen list of
+`annotation_set_ids`, so each model version can be traced to exactly the batches
+it saw. The detector is fine-tuned, and `log_artifact_mlflow.py` logs the run and
+its dataset card and registers a new version in the MLflow model registry, moving
+the `@champion` alias to it. Both `tracker.py` and `ml_backend.py` load
+`@champion`, so the next round starts from the new model without editing a path.
+
+## Results
+
+:::note[Draft]
+This stage is written up from the labelling records and the model registry only.
+The controlled comparison described at the end of the Results has not been run
+yet.
+:::
+
+### Annotation sets by frame source
+
+| Annotation set | Frame source | Bounding boxes |
+|---|---|---|
+| 5 | regular | 445 |
+| 8 | crossing_event | 781 |
+| 9 | regular | 719 |
+| 10 | regular | 224 |
+| 11 | crossing_event | 355 |
+| 14 | crossing_event | 598 |
+| 17 | ghosting_event | 1385 |
+
+### Model versions
+
+| Registry version | Dataset built | Annotation sets used | Train / val images | mAP50 | mAP50-95 | Precision | Recall |
+|---|---|---|---|---|---|---|---|
+| v1 | 2026-07-20 | 5, 8, 9, 10, 11 | 362 / 91 | 0.784 | 0.401 | 0.802 | 0.797 |
+| v3 | 2026-07-21 | v1 + 14 (crossing) | 449 / 113 | 0.806 | 0.431 | 0.859 | 0.792 |
+| v5 (champion) | 2026-08-04 | v3 + 17 (ghosting) | 663 / 168 | 0.853 | 0.519 | 0.860 | 0.871 |
+
+The registry also holds v2 and v4, which carry the same dataset and metrics as v1
+and v5, so they are left out.
+
+After the first crossing round (v1 to v3) precision rose from 0.80 to 0.86 while
+recall stayed near 0.79. After the ghosting round (v3 to v5) recall rose from 0.79
+to 0.87 while precision held at 0.86, and mAP50-95 rose from 0.43 to 0.52.
+
+**Why this is not yet a controlled comparison.**
+
+- Each version was validated on its own split, which grew from 91 to 113 to 168
+  images and contains the harder frames added in that round.
+- v1 already contains two crossing sets (8 and 11), so it is not a
+  regular-frames-only baseline.
+- These are detector metrics on labelled frames. They do not yet show the thing
+  the loop is for, which is fewer lost fish during tracking.
+
+A controlled version would evaluate v1, v3 and v5 on one fixed held-out set, and
+run the tracker with each of them on a video that none of them trained on,
+counting the lost-and-recovered events.
+
+## Discussion
+
+The pattern in the table fits the design. Crossing frames, which show two fish
+overlapping, coincided with a precision gain, and ghosting frames, which show
+fish the detector had dropped, coincided with a recall gain. That is the
+direction a failure-driven loop should move each metric, but with growing
+validation sets and only three points it is a hint, not a result.
+
+The loop has clear limits. Frame selection depends on the tracker log, so a
+failure the tracker does not log is invisible to it. Ghost gaps include real
+occlusions, so they need human review. The data still comes from one tank and a
+small set of fish, so the gains are for this setup, not for zebrafish in general.
+And every step is manual, which is why the write-up calls it a loop run by hand.
+
+What would turn this into a solid result is the held-out comparison above, plus a
+measurement of labelling time per frame with and without pre-labels. The
+retrained detector then feeds the identity work in
+[Stage 6](/portfolio/aquamind/stages/06-reid/): fewer lost fish means fewer
+crossings the appearance model has to audit.

@@ -21,7 +21,7 @@ const stages: Stage[] = [
   },
   {
     num: 2, slug: '02-annotation', name: 'Annotation',
-    lines: ['Labels boxes in Label Studio, model-assisted, stores in MySQL.'],
+    lines: ['Labels boxes in Label Studio, stores them in MySQL.'],
     fill: '#dcfce7', stroke: '#16a34a', titleColor: '#14532d', descColor: '#166534',
   },
   {
@@ -35,22 +35,27 @@ const stages: Stage[] = [
     fill: '#dbeafe', stroke: '#1d4ed8', titleColor: '#1e3a8a', descColor: '#1e40af',
   },
   {
-    num: 5, slug: '05-reid', name: 'Re-identification',
+    num: 5, slug: '05-detector-improvement', name: 'Detector improvement',
+    lines: ["The tracker's failures, pre-labelled by the detector, retrain a better one."],
+    fill: '#dcfce7', stroke: '#16a34a', titleColor: '#14532d', descColor: '#166534',
+  },
+  {
+    num: 6, slug: '06-reid', name: 'Re-identification',
     lines: ["Appearance embedding audits the tracker's identity decisions."],
     fill: '#dbeafe', stroke: '#1d4ed8', titleColor: '#1e3a8a', descColor: '#1e40af',
   },
   {
-    num: 6, slug: '06-chasing', name: 'Chasing detection',
+    num: 7, slug: '07-chasing', name: 'Chasing detection',
     lines: ['Kinematic features + LSTM flag chase events between fish.'],
     fill: '#ede9fe', stroke: '#7c3aed', titleColor: '#4c1d95', descColor: '#5b21b6',
   },
   {
-    num: 7, slug: '07-feeding-strike', name: 'Feeding-strike detection',
+    num: 8, slug: '08-feeding-strike', name: 'Feeding-strike detection',
     lines: ['CNN + LSTM on appearance — fails a stream test, a rigorous negative result.'],
     fill: '#ede9fe', stroke: '#7c3aed', titleColor: '#4c1d95', descColor: '#5b21b6',
   },
   {
-    num: 8, slug: '08-deployment', name: 'Pipeline & deployment',
+    num: 9, slug: '09-deployment', name: 'Pipeline & deployment',
     lines: ['One trained classifier behind FastAPI, Dockerized, on a cloud host.'],
     fill: '#f3f4f6', stroke: '#9ca3af', titleColor: '#374151', descColor: '#4b5563', dashed: true,
   },
@@ -68,22 +73,17 @@ const svgW = 760;
 const legendY = top + stages.length * step - gap + 26;
 const svgH = legendY + 40;
 
-// feedback loops: object detection's model feeds back into annotation (auto-labeling),
-// and the tracker's own crossing failures feed back into annotation (hard-negative mining)
-// — offset the two arrival points slightly so the arrowheads don't collide on the box edge
-const yStage2 = top + 1 * step + boxH / 2;
-const yStage2A = yStage2 - 7;
-const yStage2B = yStage2 + 7;
+// feedback loop: the detector-improvement stage (5) retrains the detector, so its output
+// returns to object detection (3), two boxes above it
 const yStage3 = top + 2 * step + boxH / 2;
-const yStage4 = top + 3 * step + boxH / 2;
-const loopAX = boxRight + 30; // auto-labeling: 3 -> 2
-const loopBX = boxRight + 68; // hard-negative mining: 4 -> 2
+const yStage5 = top + 4 * step + boxH / 2;
+const loopX = boxRight + 40;
 ---
 
 <figure class="am-arch-overview">
   <svg width="100%" viewBox={`0 0 ${svgW} ${svgH}`} role="img" xmlns="http://www.w3.org/2000/svg">
-    <title>AquaMind pipeline, stages 1 to 8, one line each</title>
-    <desc>Eight stages stacked top to bottom, each linking to its full page, colour-coded by topic: data pipeline, tracker and identity, behaviour classifiers, deployment. Two dashed feedback loops run from object detection and from the tracker back into annotation.</desc>
+    <title>AquaMind pipeline, stages 1 to 9, one line each</title>
+    <desc>Nine stages stacked top to bottom, each linking to its full page, colour-coded by topic: data pipeline, tracker and identity, behaviour classifiers, deployment. One dashed feedback loop runs from detector improvement back to object detection.</desc>
     <defs>
       <marker id="arch-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
         <path d="M2 1L8 5L2 9" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -118,16 +118,8 @@ const loopBX = boxRight + 68; // hard-negative mining: 4 -> 2
       );
     })}
 
-    <!-- feedback loops: model-assisted labeling (a) and hard-negative mining (b), both back into Annotation.
-         Labelled a/b with small circle badges instead of on-curve text — rotated micro-text in this
-         narrow a lane was unreadable; the caption below spells each one out in full. -->
-    <path d={`M ${boxRight} ${yStage3} C ${loopAX} ${yStage3} ${loopAX} ${yStage2A} ${boxRight} ${yStage2A}`} fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arch-arrow-feedback)"/>
-    <circle cx={loopAX} cy={(yStage2A + yStage3) / 2} r="8" fill="#ffffff" stroke="#7c3aed" stroke-width="1.3"/>
-    <text x={loopAX} y={(yStage2A + yStage3) / 2 + 3.5} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#6d28d9" text-anchor="middle">a</text>
-
-    <path d={`M ${boxRight} ${yStage4} C ${loopBX} ${yStage4} ${loopBX} ${yStage2B} ${boxRight} ${yStage2B}`} fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arch-arrow-feedback)"/>
-    <circle cx={loopBX} cy={(yStage2B + yStage4) / 2} r="8" fill="#ffffff" stroke="#7c3aed" stroke-width="1.3"/>
-    <text x={loopBX} y={(yStage2B + yStage4) / 2 + 3.5} font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" font-weight="700" fill="#6d28d9" text-anchor="middle">b</text>
+    <!-- feedback loop: the retrained detector returns to object detection -->
+    <path d={`M ${boxRight} ${yStage5} C ${loopX} ${yStage5} ${loopX} ${yStage3} ${boxRight} ${yStage3}`} fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arch-arrow-feedback)"/>
 
     <g>
       <rect x={boxX} y={legendY} width="12" height="12" rx="3" fill="#dcfce7" stroke="#16a34a"/>
@@ -148,7 +140,7 @@ const loopBX = boxRight + 68; // hard-negative mining: 4 -> 2
   </svg>
   <figcaption>
     <span class="am-figure__label">Fig</span>
-    All eight stages in build order, coloured by topic — click one to open its full page. The two dashed loops are feedback, not part of the forward flow: <strong>(a)</strong> object detection's trained model feeds back into annotation for model-assisted labeling, and <strong>(b)</strong> the tracker's own crossing failures are mined as hard negatives sent back to annotation. See <a href={`${base}/aquamind/architecture/detailed/`}>Detailed</a> for the script-level architecture.
+    All nine stages in build order, coloured by topic — click one to open its full page. The dashed loop is feedback, not part of the forward flow: the detector-improvement stage relabels the frames where the tracker exposed the detector's failures, and the retrained detector returns to object detection. See <a href={`${base}/aquamind/architecture/detailed/`}>Detailed</a> for the script-level architecture.
   </figcaption>
 </figure>
 

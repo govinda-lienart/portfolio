@@ -66,17 +66,17 @@ moving the `@champion` alias. Why registry over a hardcoded `config.yaml` path
 rather than filtered out (helps the model learn to ignore them rather than
 never seeing them).*
 
-*(Once trained, this stage's `@champion` model is also used back in
-[Stage 2](/portfolio/aquamind/stages/02-annotation/) to auto-label new frames —
-see that stage's "Auto-labeling" section.)*
+*(Once trained, this stage's `@champion` model is also used in
+[Stage 5](/portfolio/aquamind/stages/05-detector-improvement/) to pre-label new hard
+cases for correction, and the relabelled data comes back here for the next training round.)*
 
 ## Results
 
 ### Dataset construction
 
 *Final dataset size (train/val counts), class balance, any frame-source mix
-(regular vs crossing-event frames from Stage 4's hard-negative mining loop, once
-that closes the loop back into this stage).*
+(regular, crossing-event and ghosting-event frames, the last two from
+[Stage 5](/portfolio/aquamind/stages/05-detector-improvement/)'s relabelling loop).*
 
 ### Detector performance
 
@@ -90,4 +90,4 @@ Honest read of where the detector is strong (clean single-fish frames) and where
 it struggles (the crossing/merge case that motivates Stage 4's tracker-side
 handling and evaluation) — the same "fix is in the labels" thread that
 Stage 4 concludes with. What would improve mAP further if pursued (more crossing
-frames via the hard-negative loop, more morph diversity).
+frames via the Stage 5 relabelling loop, more morph diversity).

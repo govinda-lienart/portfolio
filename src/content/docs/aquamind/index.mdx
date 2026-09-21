@@ -58,8 +58,8 @@ experiment tracking and dataset versioning a real project needs.
 
 <FigureSrc
   src="/aquamind/pipeline-overview.svg"
-  alt="AquaMind pipeline overview, stages 1 to 8: a data pipeline (frame extraction, annotation, object detection), a custom tracker, three parallel behaviour classifiers (re-identification, chasing, feeding-strike), and deployment, with two dashed feedback loops from object detection and the tracker back into annotation."
-  caption="Stages 1-8 grouped by role: data pipeline (green, top), tracker (blue), three behaviour classifiers running off the same tracked data (bottom), and deployment (grey, upcoming). Dashed purple arrows are feedback loops, not part of the main forward flow: object detection's trained model is reused inside annotation for model-assisted labeling, and the tracker's own crossing failures are mined as hard negatives sent back to annotation. See [Architecture](/aquamind/architecture/detailed/) for the script-level, engineering-handoff version."
+  alt="AquaMind pipeline overview, stages 1 to 9: a data pipeline (frame extraction, annotation, object detection), a custom tracker, a detector-improvement stage that relabels the tracker's failures and feeds a retrained detector back into object detection, then re-identification, two behaviour classifiers (chasing, feeding-strike), and deployment."
+  caption="Stages 1-9 grouped by role: data pipeline (green, top), tracker (blue), detector improvement (green, right of the tracker), re-identification and two behaviour classifiers running off the same tracked data (bottom), and deployment (grey, upcoming). The dashed purple arrow is a feedback loop, not part of the main forward flow: the tracker's failures are relabelled, and the retrained detector returns to object detection."
 />
 
 ## Scope

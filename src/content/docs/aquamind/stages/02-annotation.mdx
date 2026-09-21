@@ -199,9 +199,10 @@ only need correcting rather than drawn from scratch. This is a forward
 reference: the model this section uses doesn't exist until Stage 3 trains it,
 so this labeling step only switches on partway through the project, once a
 first detector is registered. It's a labeling-speed tool, not a decision about
-which frames are worth labeling — that selection is Stage 4's
-`extract_crossing_frames.py`, mining tracker failures for hard negatives to
-send back here.*
+which frames are worth labeling — that selection is
+[Stage 5](/portfolio/aquamind/stages/05-detector-improvement/)'s
+`extract_crossing_frames.py` and `extract_ghost_frames.py`, mining tracker
+failures to send back here.*
 
 ## Results
 
@@ -220,7 +221,7 @@ Expected properties: one record per bounding box, `frame_id` values matching the
 *Fraction of frames where the champion model's predictions needed no correction
 vs minor/major correction, and any measured speedup vs the fully manual baseline
 above. Any failure modes (e.g. suppressed detections during crossings — the same
-weak point Stage 4/5 document).*
+weak point Stage 4 and Stage 6 document).*
 
 ## Discussion
 
@@ -232,7 +233,7 @@ to its source frame, all inside the Dockerised MySQL environment. This forms the
 labelled dataset layer for downstream model training.
 
 *Auto-labeling likely helps most on routine, single-fish frames and least on
-crossing/occlusion frames — which is exactly what Stage 4's hard-negative loop
-selects for manual review anyway. Together, model-assisted labeling (this
-section) and failure-driven frame selection (Stage 4) form one informal
-active-learning cycle, run by hand rather than automated.*
+crossing/occlusion frames — which is exactly what Stage 5's failure-driven
+frame selection sends for manual review anyway. Together, model-assisted
+labeling (this section) and failure-driven frame selection form the manual
+improvement loop written up in [Stage 5](/portfolio/aquamind/stages/05-detector-improvement/).*

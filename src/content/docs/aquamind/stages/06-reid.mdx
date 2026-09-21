@@ -1,5 +1,5 @@
 ---
-title: "Stage 5 · Fish re-identification"
+title: "Stage 6 · Fish re-identification"
 description: "A learned appearance embedding as a crossing-time swap-auditor, not a live identity-assigner."
 ---
 
@@ -8,12 +8,12 @@ import PaperHeader from '../../../../components/PaperHeader.astro';
 
 <PaperHeader
   subtitle="A learned appearance embedding as a crossing-time swap-auditor, not a live identity-assigner."
-  venue="AquaMind · Stage 5"
+  venue="AquaMind · Stage 6"
   meta="DINOv2 backbone · contrastive head · reliability horizon ~2s"
 />
 
 <Abstract>
-Stage 5 asks whether a learned appearance embedding (crop → fingerprint vector)
+Stage 6 asks whether a learned appearance embedding (crop → fingerprint vector)
 can hold fish identity through the crossings Stage 4's geometry alone can swap —
 especially for the visually near-identical golden-morph fish where classical
 colour-histogram re-ID fails. Two independent attempts at using appearance as the
@@ -40,7 +40,7 @@ from `diary.md`) is still pending. See the
 Stage 4's tracker holds identity through most crossings using geometry alone
 (merge-aware coast, velocity freeze). But the golden-morph fish are visually
 close enough that a hard crossing case could still swap two IDs with no
-geometric signal left to catch it. Stage 5 asks whether a *learned* appearance
+geometric signal left to catch it. Stage 6 asks whether a *learned* appearance
 embedding — rather than a hand-built colour histogram — can either fix that
 directly or at least flag it.
 

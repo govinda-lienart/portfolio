@@ -54,7 +54,7 @@ The tracker is **SORT-family, not Kalman**. Its core:
 - **merge-aware geometry** (`merge_fix`) for the detector-merge case where two
   fish become one YOLO box, handled with a merge-aware coast plus a velocity freeze
 - an **optional appearance-embedding fusion** into the cost matrix (see
-  [Stage 5](/portfolio/aquamind/stages/05-reid/))
+  [Stage 6](/portfolio/aquamind/stages/06-reid/))
 - a **two-phase tentative / confirmed lifecycle** during a calibration window,
   before the fish pool locks
 
@@ -66,8 +66,8 @@ frame at full temporal resolution, not the 1 FPS sample the annotation pipeline 
 detections and track state are held and updated as vectorized pandas dataframes rather than
 per-row MySQL writes, since that's what the frame-by-frame matching math needs; the finished
 per-fish tracks are then written out to `tracks.parquet`, the format the downstream behaviour
-stages ([Stage 6](/portfolio/aquamind/stages/06-chasing/),
-[Stage 7](/portfolio/aquamind/stages/07-feeding-strike/)) read from.
+stages ([Stage 7](/portfolio/aquamind/stages/07-chasing/),
+[Stage 8](/portfolio/aquamind/stages/08-feeding-strike/)) read from.
 
 :::note[Draft]
 A full walk-through of the current tracker is still being written. The section
@@ -183,12 +183,13 @@ overlaps at various angles, plus the existing training set). With two boxes
 during a crossing, the matching stays clean and the velocity swap check handles
 the rest. *The tracker logic is solid; it needs the detector to do its part.*
 This insight, plus the merge-aware geometry that replaced the Kalman model, is
-what Stage 4's current SORT-style tracker is built on.
+what Stage 4's current SORT-style tracker is built on. [Stage 5](/portfolio/aquamind/stages/05-detector-improvement/)
+acts on the other half of the conclusion: retraining the detector on the frames where it fails.
 
 *What the split evaluation rate says about where the tracker actually struggles
 (crossings, not occlusion recovery) and how that finding feeds forward: it's the
 evidence base for the merge-aware geometry above, and for
-[Stage 5](/portfolio/aquamind/stages/05-reid/)'s decision to use appearance as a
+[Stage 6](/portfolio/aquamind/stages/06-reid/)'s decision to use appearance as a
 crossing-time swap auditor rather than a live identity-assigner. Where the
 remaining error sits and whether it's a tracker problem or a detector/labeling
 problem — the same "fix is in the labels" thread this page already concludes
