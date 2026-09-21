@@ -148,6 +148,12 @@ frames by the extraction script (Stage 1), and `download_params.yaml`, written n
 Studio download it came from, and Stage 3 can build a training set by choosing annotation sets
 rather than loose files.
 
+<FigureSrc
+  src="/aquamind/stages/02-annotation-schema.svg"
+  alt="Entity-relationship diagram of all four MySQL tables. Stage 1 tables: videos (one row per registered video, with tank and recording metadata) and frames (one row per extracted frame; video_id is a foreign key into videos.id, with a unique constraint on video_id and frame_number). Stage 2 tables: annotation_sets (one row per labelling batch; video_id is a foreign key into videos.id, with frame_source, sampling parameters and the Label Studio project details) and annotations (one row per bounding box; frame_id is a foreign key into frames.id and annotation_set_id is a foreign key into annotation_sets.id, with class_id, label and the four normalised YOLO coordinates). Crow's-foot lines mark four one-to-many relationships: one video has many frames, one video has many annotation sets, one frame has many annotations, and one annotation set has many annotations."
+  caption="Entity-relationship diagram of the four tables of the aquamind database. The two navy tables come from Stage 1, the two teal tables are added in Stage 2. Every bounding box in annotations points to both the frame it sits on (frame_id) and the labelling batch it came from (annotation_set_id), and both of those trace back to a video. Crow's-foot notation: bar for one, three prongs for many. Click to zoom."
+/>
+
 ### Annotation-storage pipeline
 
 **Design overview.** <a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/store_annotations.py" target="_blank" rel="noopener noreferrer"><code>store_annotations.py</code></a> iterates over every `.txt` file in the exported
