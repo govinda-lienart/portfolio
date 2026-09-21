@@ -35,7 +35,7 @@ const stages: Stage[] = [
     fill: '#dbeafe', stroke: '#1d4ed8', titleColor: '#1e3a8a', descColor: '#1e40af',
   },
   {
-    num: 5, slug: '05-detector-improvement', name: 'Detector improvement',
+    num: 5, slug: '05-model-assisted-annotation', name: 'Model-assisted annotation',
     lines: ["The tracker's failures, pre-labelled by the detector, retrain a better one."],
     fill: '#dcfce7', stroke: '#16a34a', titleColor: '#14532d', descColor: '#166534',
   },
@@ -73,7 +73,7 @@ const svgW = 760;
 const legendY = top + stages.length * step - gap + 26;
 const svgH = legendY + 40;
 
-// feedback loop: the detector-improvement stage (5) retrains the detector, so its output
+// feedback loop: the model-assisted annotation stage (5) retrains the detector, so its output
 // returns to object detection (3), two boxes above it
 const yStage3 = top + 2 * step + boxH / 2;
 const yStage5 = top + 4 * step + boxH / 2;
@@ -83,7 +83,7 @@ const loopX = boxRight + 40;
 <figure class="am-arch-overview">
   <svg width="100%" viewBox={`0 0 ${svgW} ${svgH}`} role="img" xmlns="http://www.w3.org/2000/svg">
     <title>AquaMind pipeline, stages 1 to 9, one line each</title>
-    <desc>Nine stages stacked top to bottom, each linking to its full page, colour-coded by topic: data pipeline, tracker and identity, behaviour classifiers, deployment. One dashed feedback loop runs from detector improvement back to object detection.</desc>
+    <desc>Nine stages stacked top to bottom, each linking to its full page, colour-coded by topic: data pipeline, tracker and identity, behaviour classifiers, deployment. One dashed feedback loop runs from model-assisted annotation back to object detection.</desc>
     <defs>
       <marker id="arch-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
         <path d="M2 1L8 5L2 9" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -140,7 +140,7 @@ const loopX = boxRight + 40;
   </svg>
   <figcaption>
     <span class="am-figure__label">Fig</span>
-    All nine stages in build order, coloured by topic — click one to open its full page. The dashed loop is feedback, not part of the forward flow: the detector-improvement stage relabels the frames where the tracker exposed the detector's failures, and the retrained detector returns to object detection. See <a href={`${base}/aquamind/architecture/detailed/`}>Detailed</a> for the script-level architecture.
+    All nine stages in build order, coloured by topic — click one to open its full page. The dashed loop is feedback, not part of the forward flow: the model-assisted annotation stage relabels the frames where the tracker exposed the detector's failures, and the retrained detector returns to object detection. See <a href={`${base}/aquamind/architecture/detailed/`}>Detailed</a> for the script-level architecture.
   </figcaption>
 </figure>
 

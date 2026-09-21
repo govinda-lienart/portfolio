@@ -1,5 +1,5 @@
 <svg width="100%" viewBox="0 0 780 940" role="img" xmlns="http://www.w3.org/2000/svg">
-  <title>Stage 5 — model-assisted detector improvement loop</title>
+  <title>Stage 5 — model-assisted annotation loop</title>
   <desc>A manual improvement loop for the fish detector. The champion detector from Stage 3 and a raw video are the inputs. tracker.py (Stage 4) runs the champion on the video and writes a run log of overlap events and lost-fish events. extract_crossing_frames.py picks the frames where two fish overlap (IoU above 0.4, one frame per crossing event) and extract_ghost_frames.py picks frames from the gaps where the tracker lost a fish (three evenly spaced frames per burst); both cut JPG frames from the raw video. upload_labelstudio.py imports the frames into Label Studio, where every box is corrected by hand, the only human step. Label Studio sends each frame to ml_backend.py, which sits inside a highlighted model-assisted frame together with the champion detector it loads, and gets pre-boxes back. The corrected labels then go back through the existing pipeline: Stage 2 stores them as a new annotation set in MySQL, and Stage 3 retrains the detector, registers a new version and moves the champion alias to it. A dashed feedback arrow returns from the new champion to the start, so the next round runs the Stage 4 tracker with the improved model.</desc>
   <defs>
     <marker id="arrow5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -27,7 +27,7 @@
 
   <rect x="0" y="0" width="780" height="940" fill="#ffffff"/>
 
-  <text class="d-title" x="390" y="26">Stage 5 — Model-assisted Detector Improvement Loop</text>
+  <text class="d-title" x="390" y="26">Stage 5 — Model-assisted Annotation Loop</text>
   <text class="d-sub" x="390" y="44">manual, failure-driven · one pass per round · YOLO champion in, better champion out</text>
 
   <!-- input from Stage 3 -->

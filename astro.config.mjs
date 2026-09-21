@@ -7,7 +7,7 @@ export default defineConfig({
   site: 'https://govinda-lienart.github.io',
   base: '/portfolio',
   devToolbar: { enabled: false },
-  // Stages 5-8 were renumbered to 6-9 when the detector-improvement stage was inserted
+  // Stages 5-8 were renumbered to 6-9 when the model-assisted annotation stage was inserted
   // (2026-09-21); keep the old URLs working for any link already shared.
   redirects: {
     '/aquamind/stages/05-reid': '/portfolio/aquamind/stages/06-reid/',
@@ -54,7 +54,7 @@ export default defineConfig({
             { label: '2 · Annotation', link: '/aquamind/stages/02-annotation/' },
             { label: '3 · Object detection', link: '/aquamind/stages/03-object-detection/' },
             { label: '4 · Custom tracker & evaluation', link: '/aquamind/stages/04-tracker/' },
-            { label: '5 · Detector improvement', link: '/aquamind/stages/05-detector-improvement/' },
+            { label: '5 · Model-assisted annotation', link: '/aquamind/stages/05-model-assisted-annotation/' },
             { label: '6 · Re-identification', link: '/aquamind/stages/06-reid/' },
             { label: '7 · Chasing detection', link: '/aquamind/stages/07-chasing/' },
             { label: '8 · Feeding-strike detection', link: '/aquamind/stages/08-feeding-strike/' },
