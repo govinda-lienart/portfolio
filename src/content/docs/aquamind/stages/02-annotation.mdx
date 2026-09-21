@@ -49,8 +49,8 @@ later re-labelling are all queryable rather than living only in flat files.
 
 <FigureSrc
   src="/aquamind/stages/02-annotation-pipeline.svg"
-  alt="Stage 2 annotation and label-storage pipeline. The frame-indexed dataset from Stage 1 (JPG frames on disk plus rows in the MySQL frames table) is imported into Label Studio, running in Docker, where every visible fish is boxed by hand. download_labelstudio.py exports the labelled project in YOLO format, producing one text file per frame with one line per bounding box (class, x centre, y centre, width, height, normalised between 0 and 1). store_annotations.py parses each label file, looks up the matching frame_id in the frames table, reads the sidecar files (extraction_params.yaml and download_params.yaml) for provenance, and writes two kinds of rows to MySQL: one row per labelling batch in annotation_sets, and one row per bounding box in annotations, foreign-keyed to both its frame and its batch. Both outputs converge into a labelled dataset in which every box is traceable to its frame and its labelling batch, feeding forward into Stage 3's YOLO training."
-  caption="Stage 2 pipeline: frames from Stage 1 are labelled by hand in Label Studio (the only human step), exported in YOLO format, and stored by store_annotations.py as one annotation_sets row per labelling batch plus one annotations row per bounding box, each foreign-keyed back to its frame. The sidecar files written by the earlier scripts record where each batch came from. Cylinders mark MySQL tables, boxes mark scripts, tools and files. Click to zoom."
+  alt="Stage 2 annotation and label-storage pipeline. The frame-indexed dataset from Stage 1 (JPG frames on disk plus rows in the MySQL frames table) is uploaded by upload_labelstudio.py into a new Label Studio project, running in Docker, where every visible fish is boxed by hand. download_labelstudio.py exports the labelled project in YOLO format, producing one text file per frame with one line per bounding box (class, x centre, y centre, width, height, normalised between 0 and 1). store_annotations.py parses each label file, looks up the matching frame_id in the frames table, reads the sidecar files (extraction_params.yaml and download_params.yaml) for provenance, and writes two kinds of rows to MySQL: one row per labelling batch in annotation_sets, and one row per bounding box in annotations, foreign-keyed to both its frame and its batch. Both outputs converge into a labelled dataset in which every box is traceable to its frame and its labelling batch, feeding forward into Stage 3's YOLO training."
+  caption="Stage 2 pipeline: frames from Stage 1 are uploaded by upload_labelstudio.py and labelled by hand in Label Studio (the only human step), exported in YOLO format, and stored by store_annotations.py as one annotation_sets row per labelling batch plus one annotations row per bounding box, each foreign-keyed back to its frame. The sidecar files written by the earlier scripts record where each batch came from. Cylinders mark MySQL tables, boxes mark scripts, tools and files. Click to zoom."
 />
 
 ### Environment setup
@@ -74,11 +74,12 @@ docker run -it -p 8080:8080 -v $(pwd)/mydata:/label-studio/data heartexlabs/labe
 
 ### Annotation
 
-Inside Label Studio, a new project named *AquaMind* is created. The labelling
-interface is configured under Settings → Labelling Interface: the Computer Vision
-category, the *Object Detection with Bounding Boxes* template, and a single label
-class `danio_rerio_golden`. All extracted JPG frames from Stage 1 are imported as
-individual tasks.
+The extracted JPG frames from Stage 1 are sent to Label Studio by
+`upload_labelstudio.py`. It reads the project name and the frames folder from
+`config.yaml`, creates a new project through Label Studio's API with the labelling
+interface already defined (an image with rectangle labels for the fish classes, so
+nothing has to be configured by hand in the interface), and uploads every JPG in
+the folder as an individual task. The API credentials come from `.env`.
 
 Each frame is opened individually and a bounding box is drawn around every visible
 fish, one box per fish.
