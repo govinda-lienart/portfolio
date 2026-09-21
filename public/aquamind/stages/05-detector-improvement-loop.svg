@@ -1,6 +1,6 @@
-<svg width="100%" viewBox="0 0 780 1090" role="img" xmlns="http://www.w3.org/2000/svg">
+<svg width="100%" viewBox="0 0 780 940" role="img" xmlns="http://www.w3.org/2000/svg">
   <title>Stage 5 — model-assisted detector improvement loop</title>
-  <desc>A manual improvement loop for the fish detector. The champion detector from Stage 3 and a raw video are the inputs. tracker.py runs the champion on the video and writes a run log of overlap events and lost-fish events. extract_crossing_frames.py picks the frames where two fish overlap (IoU above 0.4, one frame per crossing event) and extract_ghost_frames.py picks frames from the gaps where the tracker lost a fish (three evenly spaced frames per burst); both cut JPG frames from the raw video and write a sidecar file. upload_labelstudio.py imports the frames into Label Studio as tasks, and ml_backend.py loads the champion detector and pre-boxes every frame. In Label Studio every pre-labelled box is corrected by hand, which is the only human step. download_labelstudio.py exports the corrected labels in YOLO format and store_annotations.py writes them to MySQL as a new annotation set (frame source crossing_event or ghosting_event) plus its bounding boxes. prepare_dataset.py builds a training set from the chosen annotation sets, the detector is fine-tuned, and log_artifact_mlflow.py registers a new version and moves the champion alias to it. A dashed feedback arrow returns from the new champion to the start, because tracker.py and ml_backend.py both load the champion alias, so the next round starts from the improved model.</desc>
+  <desc>A manual improvement loop for the fish detector. The champion detector from Stage 3 and a raw video are the inputs. tracker.py (Stage 4) runs the champion on the video and writes a run log of overlap events and lost-fish events. extract_crossing_frames.py picks the frames where two fish overlap (IoU above 0.4, one frame per crossing event) and extract_ghost_frames.py picks frames from the gaps where the tracker lost a fish (three evenly spaced frames per burst); both cut JPG frames from the raw video. upload_labelstudio.py imports the frames into Label Studio, where every box is corrected by hand, the only human step. Label Studio talks to ml_backend.py, which sits inside a highlighted model-assisted frame together with the champion detector it loads, and returns pre-boxes for every frame. The corrected labels then go back through the existing pipeline: Stage 2 stores them as a new annotation set in MySQL, and Stage 3 retrains the detector, registers a new version and moves the champion alias to it. A dashed feedback arrow returns from the new champion to the start, so the next round runs the Stage 4 tracker with the improved model.</desc>
   <defs>
     <marker id="arrow5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -13,16 +13,17 @@
       .desc { font-size: 11px; fill: #4a4a4a; }
       .prov { font-size: 9.5px; font-weight: 700; fill: #5b7aa8; letter-spacing: 0.5px; }
       .prov-h { font-size: 9.5px; font-weight: 700; fill: #b5651d; letter-spacing: 0.5px; }
+      .prov-m { font-size: 9.5px; font-weight: 700; fill: #6d28d9; letter-spacing: 0.5px; }
       .res { font-size: 12px; font-weight: 700; fill: #2f5a8a; }
       .note { font-size: 10.5px; font-style: italic; fill: #2f5a8a; }
       .loop { font-size: 10.5px; font-style: italic; fill: #6d28d9; }
+      .tiny { font-size: 9.5px; font-style: italic; fill: #6d28d9; }
       .legend { font-size: 10px; fill: #555; text-anchor: start; }
       .box { stroke-width: 1.5; }
-      .cyl { stroke-width: 1.5; }
     </style>
   </defs>
 
-  <rect x="0" y="0" width="780" height="1090" fill="#ffffff"/>
+  <rect x="0" y="0" width="780" height="940" fill="#ffffff"/>
 
   <text class="d-title" x="390" y="26">Stage 5 — Model-assisted Detector Improvement Loop</text>
   <text class="d-sub" x="390" y="44">manual, failure-driven · one pass per round · YOLO champion in, better champion out</text>
@@ -52,80 +53,80 @@
   <text class="name" x="390" y="372">Hard-case frames (.jpg)</text>
   <text class="desc" x="390" y="390">cut from the raw video · sidecar file · registered in MySQL</text>
 
-  <!-- upload + ml_backend -->
-  <rect class="box" x="60" y="434" width="320" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
-  <text class="name" x="220" y="458">upload_labelstudio.py</text>
-  <text class="desc" x="220" y="478">creates the project, imports the frames as tasks</text>
+  <!-- ===== labelling row: upload -> Label Studio <-> model sub-frame ===== -->
+  <rect class="box" x="40" y="468" width="190" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="135" y="492">upload_labelstudio.py</text>
+  <text class="desc" x="135" y="512">imports the frames as tasks</text>
 
-  <rect class="box" x="400" y="434" width="320" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
-  <text class="name" x="560" y="458">ml_backend.py</text>
-  <text class="desc" x="560" y="478">loads @champion, pre-boxes every frame</text>
+  <rect class="box" x="270" y="458" width="200" height="84" rx="8" fill="#fce5cd" stroke="#e69138"/>
+  <text class="prov-h" x="370" y="478">HUMAN STEP</text>
+  <text class="name" x="370" y="497">Label Studio</text>
+  <text class="desc" x="370" y="517">every pre-labelled box is</text>
+  <text class="desc" x="370" y="531">corrected by hand</text>
 
-  <!-- Label Studio: the human step -->
-  <rect class="box" x="210" y="528" width="360" height="72" rx="8" fill="#fce5cd" stroke="#e69138"/>
-  <text class="prov-h" x="390" y="546">HUMAN STEP</text>
-  <text class="name" x="390" y="565">Label Studio</text>
-  <text class="desc" x="390" y="585">every pre-labelled box is corrected by hand</text>
+  <!-- model sub-frame: ml_backend.py + the champion it loads -->
+  <rect x="525" y="440" width="205" height="194" rx="12" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="6 4"/>
+  <text class="prov-m" x="627" y="457">MODEL-ASSISTED</text>
 
-  <!-- export + store -->
-  <rect class="box" x="170" y="630" width="440" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
-  <text class="name" x="390" y="654">download_labelstudio.py → store_annotations.py</text>
-  <text class="desc" x="390" y="674">YOLO export → one new annotation set plus its boxes</text>
+  <rect class="box" x="537" y="472" width="180" height="56" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="627" y="496">ml_backend.py</text>
+  <text class="desc" x="627" y="514">pre-boxes every frame</text>
 
-  <!-- MySQL cylinder -->
-  <path class="cyl" d="M 190,734 L 190,794 A 200,14 0 0 0 590,794 L 590,734 A 200,14 0 0 0 190,734 Z" fill="#d0e0e3" stroke="#45818e"/>
-  <ellipse class="cyl" cx="390" cy="734" rx="200" ry="14" fill="#d0e0e3" stroke="#45818e"/>
-  <text class="name" x="390" y="758">annotation_sets + annotations (MySQL)</text>
-  <text class="desc" x="390" y="776">frame_source: crossing_event or ghosting_event</text>
+  <rect class="box" x="537" y="562" width="180" height="60" rx="8" fill="#dbe9f6" stroke="#5b7aa8"/>
+  <text class="res" x="627" y="586">Champion detector</text>
+  <text class="desc" x="627" y="604">YOLO @champion (registry)</text>
 
-  <!-- retrain + register -->
-  <rect class="box" x="170" y="838" width="440" height="76" rx="8" fill="#d5e8d4" stroke="#82b366"/>
-  <text class="name" x="390" y="862">prepare_dataset.py → YOLO fine-tune</text>
-  <text class="desc" x="390" y="881">train on the chosen annotation_set_ids, log the run to MLflow</text>
-  <text class="desc" x="390" y="898">log_artifact_mlflow.py registers a version, moves @champion</text>
-
-  <!-- result -->
-  <rect class="box" x="190" y="942" width="400" height="80" rx="8" fill="#dbe9f6" stroke="#5b7aa8"/>
-  <text class="res" x="390" y="967">New champion detector</text>
-  <text class="desc" x="390" y="987">tracker.py and ml_backend.py load @champion, so nothing is edited</text>
-  <text class="note" x="390" y="1010">→ next round: run the tracker with this model</text>
-
-  <!-- edges -->
+  <!-- edges: frames -> upload, upload -> Label Studio, Label Studio <-> ml_backend, champion -> ml_backend -->
   <g fill="none" stroke="#555" stroke-width="1.5">
     <polyline points="390,132 390,158" marker-end="url(#arrow5)"/>
     <polyline points="390,224 390,238 220,238 220,252" marker-end="url(#arrow5)"/>
     <polyline points="390,224 390,238 560,238 560,252" marker-end="url(#arrow5)"/>
     <polyline points="220,318 220,332 390,332 390,346" marker-end="url(#arrow5)"/>
     <polyline points="560,318 560,332 390,332 390,346" marker-end="url(#arrow5)"/>
-    <polyline points="390,404 390,418 220,418 220,432" marker-end="url(#arrow5)"/>
-    <polyline points="390,404 390,418 560,418 560,432" marker-end="url(#arrow5)"/>
-    <polyline points="220,498 220,512 390,512 390,526" marker-end="url(#arrow5)"/>
-    <polyline points="560,498 560,512 390,512 390,526" marker-end="url(#arrow5)"/>
-    <polyline points="390,600 390,628" marker-end="url(#arrow5)"/>
-    <polyline points="390,694 390,718" marker-end="url(#arrow5)"/>
-    <polyline points="390,808 390,836" marker-end="url(#arrow5)"/>
-    <polyline points="390,914 390,940" marker-end="url(#arrow5)"/>
+    <polyline points="390,404 390,424 135,424 135,466" marker-end="url(#arrow5)"/>
+    <polyline points="232,500 268,500" marker-end="url(#arrow5)"/>
+  </g>
+  <polyline points="474,500 523,500" fill="none" stroke="#6d28d9" stroke-width="1.6" marker-start="url(#arrow5)" marker-end="url(#arrow5)"/>
+  <text class="tiny" x="498" y="490">asks</text>
+  <text class="tiny" x="498" y="516">boxes</text>
+  <polyline points="627,560 627,530" fill="none" stroke="#6d28d9" stroke-width="1.6" marker-end="url(#arrow5)"/>
+  <text class="tiny" x="0" y="0" transform="translate(656 549)">loads</text>
+
+  <!-- back through the existing pipeline: Stages 2 and 3 -->
+  <rect class="box" x="120" y="664" width="540" height="86" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+  <text class="name" x="390" y="688">Back through Stages 2 and 3</text>
+  <text class="desc" x="390" y="709">Stage 2: the corrected boxes are stored as a new annotation set in MySQL</text>
+  <text class="desc" x="390" y="727">Stage 3: the detector is retrained, registered, and @champion moves to it</text>
+  <g fill="none" stroke="#555" stroke-width="1.5">
+    <polyline points="370,542 370,662" marker-end="url(#arrow5)"/>
+    <polyline points="390,750 390,788" marker-end="url(#arrow5)"/>
   </g>
 
+  <!-- result -->
+  <rect class="box" x="190" y="790" width="400" height="80" rx="8" fill="#dbe9f6" stroke="#5b7aa8"/>
+  <text class="res" x="390" y="815">New champion detector</text>
+  <text class="desc" x="390" y="835">loaded by tracker.py and ml_backend.py, so nothing is edited</text>
+  <text class="note" x="390" y="858">→ next round: Stage 4 runs the tracker with this model</text>
+
   <!-- feedback loop back to the start -->
-  <polyline points="592,982 752,982 752,96 732,96" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow5)"/>
-  <text class="loop" x="0" y="0" transform="translate(768 540) rotate(-90)">feedback: the improved champion is what the next round starts from</text>
+  <polyline points="592,830 752,830 752,96 732,96" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow5)"/>
+  <text class="loop" x="0" y="0" transform="translate(768 468) rotate(-90)">feedback: the improved champion is what the next round starts from</text>
 
   <!-- legend -->
   <g>
-    <rect x="60" y="1055" width="11" height="11" rx="2" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="3 2"/>
-    <text class="legend" x="77" y="1064">from Stage 3</text>
-    <rect x="170" y="1055" width="11" height="11" rx="2" fill="#d5e8d4" stroke="#82b366"/>
-    <text class="legend" x="187" y="1064">script step</text>
-    <rect x="265" y="1055" width="11" height="11" rx="2" fill="#fce5cd" stroke="#e69138"/>
-    <text class="legend" x="282" y="1064">human step</text>
-    <rect x="360" y="1055" width="11" height="11" rx="2" fill="#fff2cc" stroke="#d6b656"/>
-    <text class="legend" x="377" y="1064">disk file</text>
-    <rect x="440" y="1055" width="11" height="11" rx="2" fill="#d0e0e3" stroke="#45818e"/>
-    <text class="legend" x="457" y="1064">MySQL table</text>
-    <rect x="540" y="1055" width="11" height="11" rx="2" fill="#dbe9f6" stroke="#5b7aa8"/>
-    <text class="legend" x="557" y="1064">result</text>
-    <line x1="610" y1="1060" x2="636" y2="1060" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4"/>
-    <text class="legend" x="642" y="1064">feedback loop</text>
+    <rect x="30" y="905" width="11" height="11" rx="2" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="3 2"/>
+    <text class="legend" x="47" y="914">from Stage 3</text>
+    <rect x="145" y="905" width="11" height="11" rx="2" fill="#d5e8d4" stroke="#82b366"/>
+    <text class="legend" x="162" y="914">script step</text>
+    <rect x="240" y="905" width="11" height="11" rx="2" fill="#fce5cd" stroke="#e69138"/>
+    <text class="legend" x="257" y="914">human step</text>
+    <rect x="335" y="905" width="11" height="11" rx="2" fill="#fff2cc" stroke="#d6b656"/>
+    <text class="legend" x="352" y="914">disk file</text>
+    <rect x="420" y="905" width="11" height="11" rx="2" fill="#f5f3ff" stroke="#7c3aed" stroke-dasharray="3 2"/>
+    <text class="legend" x="437" y="914">model in the loop</text>
+    <rect x="540" y="905" width="11" height="11" rx="2" fill="#dbe9f6" stroke="#5b7aa8"/>
+    <text class="legend" x="557" y="914">detector / result</text>
+    <line x1="650" y1="910" x2="674" y2="910" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text class="legend" x="680" y="914">feedback</text>
   </g>
 </svg>
