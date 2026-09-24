@@ -7,11 +7,13 @@ interface Props {
   caption?: string;
   /** cap display width in px */
   width?: number;
+  /** cap the whole figure (image + caption) to this width in px and centre it */
+  maxWidth?: number;
 }
-const { src, alt, caption, width = 900 } = Astro.props;
+const { src, alt, caption, width = 900, maxWidth } = Astro.props;
 ---
 
-<figure class="am-figure">
+<figure class="am-figure" style={maxWidth ? `max-width:${maxWidth}px;margin-inline:auto` : undefined}>
   <Image src={src} alt={alt} width={width} data-full={src.src} />
   {caption && (
     <figcaption>

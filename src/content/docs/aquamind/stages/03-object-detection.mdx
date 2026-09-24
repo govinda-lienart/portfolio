@@ -4,6 +4,7 @@ description: "Building the YOLO dataset from MySQL and fine-tuning a fish detect
 ---
 
 import Abstract from '../../../../components/Abstract.astro';
+import FigureSrc from '../../../../components/FigureSrc.astro';
 import PaperHeader from '../../../../components/PaperHeader.astro';
 
 <PaperHeader
@@ -40,6 +41,21 @@ fine-tune YOLOv8 on that dataset and register the result so later stages resolve
 it by name/alias instead of a hardcoded path.*
 
 ## Methods
+
+### Pipeline overview
+
+Annotated frames leave MySQL as a YOLO dataset folder, a pretrained YOLOv8 is fine-tuned on
+that folder in a GPU notebook, and the resulting weights are registered in the MLflow Model
+Registry, so later stages load the detector by name instead of by file path. The figure below
+shows the full pipeline.
+
+<FigureSrc
+  src="/aquamind/stages/03-object-detection-pipeline.svg"
+  alt="Stage 3 pipeline. The labelled dataset from Stage 2 (annotations, annotation_sets and frames tables in MySQL) is turned into a YOLO dataset folder by prepare_dataset.py, which picks the annotated frames of the chosen annotation sets, splits them 80/20 into train and validation with a fixed seed, and writes the images and one YOLO label file per frame, plus dataset_card.yaml (annotation sets, videos, counts, git commit) and dataset.yaml. The dataset is versioned with DVC, with the pointer file in git and the data on Google Drive. A Kaggle GPU notebook clones the repository, pulls the dataset with DVC and fine-tunes a pretrained YOLOv8. The run folder (best.pt, last.pt, results.csv, plots) is downloaded by hand. log_artifact_mlflow.py logs the parameters, per-epoch metrics and dataset card to MLflow and registers best.pt as a new version of aquamind-yolo-detector in the MLflow Model Registry, moving the champion alias to it. Later stages load the detector by alias: the tracker in Stage 4 and pre-labelling in Stage 5."
+  caption="Stage 3 pipeline: the labelled dataset from Stage 2 becomes a versioned YOLO dataset folder (prepare_dataset.py, DVC), a pretrained YOLOv8 is fine-tuned in a Kaggle GPU notebook, and log_artifact_mlflow.py logs the run and registers best.pt in the MLflow Model Registry, where later stages load it by the @champion alias. The training run is downloaded from Kaggle by hand. Click to zoom."
+/>
+
+The first three subsections below follow the pipeline from top to bottom.
 
 ### Dataset construction — `prepare_dataset.py`
 

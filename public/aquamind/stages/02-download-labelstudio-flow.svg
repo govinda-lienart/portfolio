@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1220" height="870" viewBox="0 0 1220 870" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#444"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1220" height="870" fill="#fdfdfb"/>
+  <text x="610" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#222">download_labelstudio.py — flow</text>
+
+  <!-- ===== inputs ===== -->
+  <rect x="60" y="65" width="240" height="50" rx="8" fill="#f5eefc" stroke="#8a4fc9" stroke-width="1.5"/>
+  <text x="180" y="95" text-anchor="middle" font-size="13" fill="#4a2c85">.env</text>
+
+  <rect x="880" y="65" width="260" height="50" rx="8" fill="#f5eefc" stroke="#8a4fc9" stroke-width="1.5"/>
+  <text x="1010" y="95" text-anchor="middle" font-size="13" fill="#4a2c85">config.yaml</text>
+
+  <!-- ===== STEP 1: read config.yaml + auth ===== -->
+  <rect x="340" y="150" width="520" height="110" rx="8" fill="#fff7e0" stroke="#c99a1e" stroke-width="1.5"/>
+  <text x="360" y="174" font-size="13" font-weight="bold" fill="#7a5c00">STEP 1 — READ config.yaml + AUTH</text>
+  <text x="360" y="194" font-size="11" fill="#8a6d10">load .env → LS_URL, LS_TOKEN (raises RuntimeError if missing)</text>
+  <text x="360" y="212" font-size="11" fill="#8a6d10">read config.yaml → project_name</text>
+  <text x="360" y="230" font-size="11" fill="#8a6d10">POST /api/token/refresh → HEADERS = Bearer &lt;access token&gt;</text>
+  <path d="M 180 115 C 180 150 260 172 338 190" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 1010 115 C 1010 160 940 200 862 208" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="260" x2="600" y2="282" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== STEP 2: lookup project by name ===== -->
+  <rect x="340" y="282" width="520" height="76" rx="8" fill="#fff7e0" stroke="#c99a1e" stroke-width="1.5"/>
+  <text x="360" y="306" font-size="13" font-weight="bold" fill="#7a5c00">STEP 2 — LOOKUP project id by name</text>
+  <text x="360" y="326" font-size="11" fill="#8a6d10">GET /api/projects → loop until title == project_name</text>
+  <text x="360" y="344" font-size="11" fill="#8a6d10">raises ValueError if not found → project_id</text>
+  <line x1="600" y1="358" x2="600" y2="380" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== STEP 3: fetch tasks, filter to labeled ===== -->
+  <rect x="340" y="380" width="520" height="76" rx="8" fill="#fff7e0" stroke="#c99a1e" stroke-width="1.5"/>
+  <text x="360" y="404" font-size="13" font-weight="bold" fill="#7a5c00">STEP 3 — FETCH tasks + filter to labeled</text>
+  <text x="360" y="424" font-size="11" fill="#8a6d10">GET /api/tasks?project=id&amp;page_size=1000</text>
+  <text x="360" y="442" font-size="11" fill="#8a6d10">keeps tasks where is_labeled → labeled_ids</text>
+  <line x1="600" y1="456" x2="600" y2="480" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== decision: any labeled tasks? ===== -->
+  <polygon points="600,480 700,520 600,560 500,520" fill="#fceef7" stroke="#b8368f" stroke-width="1.5"/>
+  <text x="600" y="515" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a1f61">any labeled</text>
+  <text x="600" y="529" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a1f61">tasks?</text>
+
+  <rect x="60" y="500" width="240" height="40" rx="6" fill="#f2f2f2" stroke="#888" stroke-width="1.5"/>
+  <text x="180" y="525" text-anchor="middle" font-size="11.5" fill="#444">raise ValueError (stop)</text>
+  <line x1="500" y1="520" x2="302" y2="520" stroke="#b8368f" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="400" y="511" text-anchor="middle" font-size="10" fill="#7a1f61">no</text>
+
+  <line x1="600" y1="560" x2="600" y2="586" stroke="#b8368f" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="628" y="576" text-anchor="middle" font-size="10" fill="#7a1f61">yes</text>
+
+  <!-- labeled_ids value box, feeds STEP 4 -->
+  <rect x="60" y="600" width="240" height="46" rx="8" fill="#eef4ff" stroke="#3b6fd1" stroke-width="1.5"/>
+  <text x="180" y="623" text-anchor="middle" font-size="12" fill="#1c3f80">labeled_ids</text>
+  <text x="180" y="638" text-anchor="middle" font-size="9.5" fill="#666" font-style="italic">the task ids kept in STEP 3</text>
+  <path d="M 340 440 C 320 480 320 560 250 598" fill="none" stroke="#3b6fd1" stroke-width="1.3" stroke-dasharray="3 4" marker-end="url(#arrow)" opacity="0.8"/>
+
+  <!-- ===== STEP 4: export labels ===== -->
+  <rect x="340" y="586" width="520" height="100" rx="8" fill="#fff7e0" stroke="#c99a1e" stroke-width="1.5"/>
+  <text x="360" y="610" font-size="13" font-weight="bold" fill="#7a5c00">STEP 4 — EXPORT labels (YOLO zip → extract)</text>
+  <text x="360" y="630" font-size="11" fill="#8a6d10">output_dir = labelstudio_download/&lt;project_name&gt;_&lt;timestamp&gt;</text>
+  <text x="360" y="648" font-size="11" fill="#8a6d10">GET /api/projects/{id}/export?exportType=YOLO&amp;ids[]=…</text>
+  <text x="360" y="666" font-size="11" fill="#8a6d10">saves export.zip, extracts it, deletes the zip</text>
+  <line x1="300" y1="623" x2="338" y2="636" stroke="#3b6fd1" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="686" x2="600" y2="708" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== STEP 5: sidecar + done ===== -->
+  <rect x="340" y="708" width="520" height="76" rx="8" fill="#fff7e0" stroke="#c99a1e" stroke-width="1.5"/>
+  <text x="360" y="732" font-size="13" font-weight="bold" fill="#7a5c00">STEP 5 — SIDECAR + DONE</text>
+  <text x="360" y="752" font-size="11" fill="#8a6d10">writes download_params.yaml (project_id, min/max task id, counts)</text>
+  <text x="360" y="770" font-size="11" fill="#8a6d10">prints labeled / total tasks exported</text>
+
+  <!-- result: output folder on disk -->
+  <rect x="900" y="716" width="270" height="60" rx="8" fill="#f5eefc" stroke="#8a4fc9" stroke-width="1.5"/>
+  <text x="1035" y="741" text-anchor="middle" font-size="11.5" fill="#4a2c85">labelstudio_download/&lt;project&gt;_&lt;ts&gt;/</text>
+  <text x="1035" y="759" text-anchor="middle" font-size="9.5" fill="#666" font-style="italic">YOLO labels + download_params.yaml</text>
+  <line x1="862" y1="746" x2="898" y2="746" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== Label Studio REST API (external service, reused by STEP 1 / 2 / 3 / 4) ===== -->
+  <rect x="1055" y="150" width="150" height="536" rx="12" fill="#eaf6f7" stroke="#1f8fa3" stroke-width="1.5"/>
+  <text x="1130" y="410" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f5c6b">Label Studio</text>
+  <text x="1130" y="428" text-anchor="middle" font-size="10.5" fill="#1f8fa3">(Docker)</text>
+  <text x="1130" y="444" text-anchor="middle" font-size="10.5" fill="#1f8fa3">REST API</text>
+
+  <line x1="862" y1="224" x2="1053" y2="224" stroke="#7a5c00" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1053" y1="236" x2="862" y2="236" stroke="#7a5c00" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <line x1="862" y1="314" x2="1053" y2="314" stroke="#7a5c00" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1053" y1="326" x2="862" y2="326" stroke="#7a5c00" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <line x1="862" y1="412" x2="1053" y2="412" stroke="#7a5c00" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1053" y1="424" x2="862" y2="424" stroke="#7a5c00" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <line x1="862" y1="630" x2="1053" y2="630" stroke="#7a5c00" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1053" y1="642" x2="862" y2="642" stroke="#7a5c00" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+
+  <!-- legend -->
+  <rect x="60" y="822" width="20" height="14" rx="3" fill="#f5eefc" stroke="#8a4fc9" stroke-width="1.5"/>
+  <text x="86" y="833" font-size="10.5" fill="#555">external file</text>
+  <rect x="230" y="822" width="20" height="14" rx="3" fill="#eef4ff" stroke="#3b6fd1" stroke-width="1.5"/>
+  <text x="256" y="833" font-size="10.5" fill="#555">value in memory</text>
+  <rect x="420" y="822" width="20" height="14" rx="3" fill="#fff7e0" stroke="#c99a1e" stroke-width="1.5"/>
+  <text x="446" y="833" font-size="10.5" fill="#555">step in this script</text>
+  <polygon points="660,822 680,829 660,836 640,829" fill="#fceef7" stroke="#b8368f" stroke-width="1.5"/>
+  <text x="690" y="833" font-size="10.5" fill="#555">branch</text>
+  <line x1="800" y1="829" x2="830" y2="829" stroke="#7a5c00" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="840" y="833" font-size="10.5" fill="#555">API request</text>
+  <line x1="960" y1="829" x2="990" y2="829" stroke="#7a5c00" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <text x="1000" y="833" font-size="10.5" fill="#555">API response</text>
+</svg>

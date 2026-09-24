@@ -4,8 +4,11 @@ description: "Manual fish annotation: drawing bounding boxes and storing them as
 ---
 
 import Abstract from '../../../../components/Abstract.astro';
+import Figure from '../../../../components/Figure.astro';
 import FigureSrc from '../../../../components/FigureSrc.astro';
 import PaperHeader from '../../../../components/PaperHeader.astro';
+import labelStudioInterface from '../../../../assets/aquamind/stage-02/label-studio-interface.png';
+import reflectionLabelling from '../../../../assets/aquamind/stage-02/reflection-labelling.png';
 
 <PaperHeader
   subtitle="Manual fish annotation: drawing bounding boxes and storing them as queryable relational records."
@@ -51,14 +54,23 @@ object detector in Stage 3.
 
 ## Methods
 
+### Pipeline overview
+
+Frames go into Label Studio and come out as YOLO label files, one per frame, each
+line describing one bounding box. `store_annotations.py` combines those files with
+sidecar files that record how the batch was built, and writes two MySQL tables: one
+that summarises each round of labelling for traceability, and one that holds every
+individual bounding box. Fig. 1 shows the full pipeline below.
+
 <FigureSrc
   src="/aquamind/stages/02-annotation-pipeline.svg"
   alt="Stage 2 annotation and label-storage pipeline. The frame-indexed dataset from Stage 1 (JPG frames on disk plus rows in the MySQL frames table) is uploaded by upload_labelstudio.py into a new Label Studio project, running in Docker, where every visible fish is boxed by hand. download_labelstudio.py exports the labelled project in YOLO format, producing one text file per frame with one line per bounding box (class, x centre, y centre, width, height, normalised between 0 and 1). store_annotations.py parses each label file, looks up the matching frame_id in the frames table (the Stage 1 table, an input to the script), reads the sidecar files (extraction_params.yaml and download_params.yaml) for provenance, and writes two kinds of rows to MySQL: one row per labelling batch in annotation_sets, and one row per bounding box in annotations, foreign-keyed to both its frame and its batch. Both outputs converge into a labelled dataset in which every box is traceable to its frame and its labelling batch, feeding forward into Stage 3's YOLO training."
   caption="Stage 2 pipeline: frames from Stage 1 are uploaded by upload_labelstudio.py and labelled by hand in Label Studio (the only human step), exported in YOLO format, and stored by store_annotations.py as one annotation_sets row per labelling batch plus one annotations row per bounding box, each foreign-keyed back to its frame. The sidecar files written by the earlier scripts record where each batch came from. Cylinders mark MySQL tables, boxes mark scripts, tools and files. Click to zoom."
 />
 
-The subsections below follow the pipeline figure from top to bottom: the tools and
-tables are set up first, then each script in turn.
+The subsections below follow the pipeline figure from top to bottom: Label Studio is
+set up first, then each script in turn, with the tables introduced right before the
+script that first writes to them.
 
 ### Setting up Label Studio
 
@@ -67,17 +79,82 @@ Desktop. A volume mount keeps its data in a local `mydata` folder on the host, s
 labelled work survives a container restart. The upload and download scripts talk to it
 through its API, using the address and key stored in the `.env` file.
 
+<Figure src={labelStudioInterface} alt="Label Studio labelling view of a tank frame. Bounding boxes are drawn around each fish, the task list is on the left, the list of regions with their classes is on the right, and the two class buttons, danio_rerio and reflection, sit under the image." caption="Label Studio, the open-source annotation tool used in this stage. Each task is one frame: boxes are drawn directly on the image, the regions panel on the right lists every box with its class, and the two class buttons under the image (with their hotkeys) are the label set defined by upload_labelstudio.py." width={900} />
+
+### Uploading the frames
+
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/upload_labelstudio.py" target="_blank" rel="noopener noreferrer"><code>upload_labelstudio.py</code></a> (<a href="#" data-lightbox-src="/portfolio/aquamind/stages/02-upload-labelstudio-flow.svg" data-lightbox-alt="Internal flow of upload_labelstudio.py: .env and config.yaml are read and an access token is exchanged with Label Studio's API, then the frames folder is globbed for JPGs. If none are found the script raises an error and stops; otherwise it creates a new Label Studio project with the two-class labelling interface predefined, then uploads every JPG as an individual task, printing progress after each upload, and finishes by printing the project URL.">flow diagram</a>) reads a project name and a frames folder from
+`config.yaml` and creates the project through Label Studio's API. The labelling interface
+is defined in the script and not in the web interface: an image with rectangle labels
+for two classes, `danio_rerio` (hotkey `d`) and `reflection` (hotkey `r`). Reflections
+of the fish on the tank glass are a class of their own so that the detector learns to
+ignore them, instead of never seeing them. The script then uploads every JPG in the
+folder as one task and logs its progress after each upload.
+
+### Labelling by hand
+
+Each task is opened in Label Studio and a bounding box is drawn around every visible
+fish, one box per fish, plus one for each visible reflection. This is the only manual
+step in the stage.
+
+The reflection class is the hard part of the labelling. The glass of the tank acts as a
+mirror, so a fish can appear twice in the same frame: once as the animal itself and once
+as its reflection. If both were boxed as fish, one individual would be counted twice, and
+the detector would be trained to treat a mirror image as a real animal. Boxing reflections
+under their own class teaches the model the difference. In the figure below, cyan boxes
+mark real fish (`danio_rerio`) and pink boxes mark reflections (`reflection`).
+
+The tank adds a second layer of ambiguity. The glass is not the only reflective surface:
+the water surface also mirrors the scene, so a reflection can itself be reflected again,
+and a single fish can leave several look-alike images in the same frame. Some of these
+are faint, distorted or partly cut off, and it is not always obvious where a real fish
+ends and a mirror image begins. The labelling therefore needs a consistent rule for what
+counts as a fish and what counts as a reflection, applied the same way on every frame.
+Otherwise the two classes blur together in the training data. The aim is that a detector
+trained on these labels learns to tell them apart, but whether it manages this
+reliably is something the evaluation in Stage 3 has to show, not something the labelling
+can guarantee.
+
+<Figure src={reflectionLabelling} alt="Close-up of the left side of the tank in Label Studio. Cyan boxes surround real fish and pink boxes surround their reflections on the glass, several of them overlapping or sitting directly next to the fish they mirror." caption="The two classes in practice. Cyan boxes are real fish (danio_rerio), pink boxes are their reflections on the tank glass (reflection). Labelling reflections explicitly prevents the same individual from being counted twice and stops the detector from learning to see mirror images as fish." width={560} maxWidth={480} />
+
+### Exporting in YOLO format
+
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/download_labelstudio.py" target="_blank" rel="noopener noreferrer"><code>download_labelstudio.py</code></a> (<a href="#" data-lightbox-src="/portfolio/aquamind/stages/02-download-labelstudio-flow.svg" data-lightbox-alt="Internal flow of download_labelstudio.py: .env and config.yaml are read and an access token is exchanged with Label Studio's API, the project id is looked up by name, and the project's tasks are fetched and filtered to the labelled ones. If none are labelled the script raises an error and stops; otherwise it requests a YOLO export for those task ids, saves and extracts the zip into a timestamped folder, writes download_params.yaml next to it, and prints how many of the tasks were exported.">flow diagram</a>) looks up the project by name, asks Label Studio for the ids of the tasks that
+have been labelled, exports them with
+Label Studio's YOLO export type, and unpacks the archive into a timestamped folder.
+Source images can be downloaded as well, but by default they are not, because the
+frames already exist on disk from Stage 1. Next to the export the script writes
+`download_params.yaml`, which records the project name and id, the task-id range and
+the download time.
+
+The export contains a `classes.txt` file with the label names, a `labels/` folder with
+one `.txt` file per frame, and a `notes.json` file with metadata. Each label file has
+one line per bounding box, holding five values that are normalised between 0 and 1
+relative to the image dimensions, which makes the format independent of resolution.
+For example:
+
+```text
+class_id  x_center  y_center  width  height
+0         0.242     0.668     0.103  0.113
+```
+
+This line is one fish: class 0 (`danio_rerio`), centred about a quarter of the way
+across the frame and two thirds of the way down.
+
+<FigureSrc src="/aquamind/yolo-bbox-explainer.svg" alt="Diagram of one fish in a tank image with its YOLO bounding box. The label line 0 0.242 0.668 0.103 0.113 is broken down into the class (danio_rerio), the x and y centre of the box, and its width and height, each normalised between 0 and 1." caption="YOLO coordinate system: the label line for one fish, broken down. All values are normalised between 0 and 1." />
+
 ### Setting up the tables
 
-Stage 2 adds two relational tables. `annotations` holds one row per bounding box: the
-frame it sits on (`frame_id`, a foreign key into `frames`), the labelling batch it
-came from (`annotation_set_id`, a foreign key into `annotation_sets`), the class, and
-the four normalised box coordinates. `annotation_sets` holds one row per labelling
-batch: the video (`video_id`), the `frame_source` (`regular`, `crossing_event` or
-`ghosting_event`), the sampling parameters (`sample_rate`, `start_seconds`,
-`end_seconds`, `frames_extracted`, plus `iou_threshold` and `dedup_window` for
-crossing-event batches), and the Label Studio project details (name, id, download
-time and task-id range).
+Stage 2 adds two relational tables, both first written to by the script below.
+`annotations` holds one row per bounding box: the frame it sits on (`frame_id`, a
+foreign key into `frames`), the labelling batch it came from (`annotation_set_id`, a
+foreign key into `annotation_sets`), the class, and the four normalised box
+coordinates. `annotation_sets` holds one row per labelling batch: the video
+(`video_id`), the `frame_source` (`regular`, `crossing_event` or `ghosting_event`),
+the sampling parameters (`sample_rate`, `start_seconds`, `end_seconds`,
+`frames_extracted`, plus `iou_threshold` and `dedup_window` for crossing-event
+batches), and the Label Studio project details (name, id, download time and task-id
+range).
 
 The batch table was added later in the project, once frames came from more than one
 source (see [Stage 5](/portfolio/aquamind/stages/05-model-assisted-annotation/)), and
@@ -95,61 +172,15 @@ The definitions of all four tables are in
 <a href="https://github.com/govinda-lienart/AquaMind/blob/main/schema.sql" target="_blank" rel="noopener noreferrer"><code>schema.sql</code></a>
 on GitHub.
 
-### Uploading the frames
-
-<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/upload_labelstudio.py" target="_blank" rel="noopener noreferrer"><code>upload_labelstudio.py</code></a> reads a project name and a frames folder from
-`config.yaml`, appends a timestamp to the project name so that every upload is its own
-project, and creates the project through Label Studio's API. The labelling interface
-is defined in the script and not in the web interface: an image with rectangle labels
-for two classes, `danio_rerio` (hotkey `d`) and `reflection` (hotkey `r`). Reflections
-of the fish on the tank glass are a class of their own so that the detector learns to
-ignore them, instead of never seeing them. The script then uploads every JPG in the
-folder as one task and prints its progress every ten images.
-
-### Labelling by hand
-
-Each task is opened in Label Studio and a bounding box is drawn around every visible
-fish, one box per fish, plus one for each visible reflection. This is the only manual
-step in the stage.
-
-### Exporting in YOLO format
-
-<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/download_labelstudio.py" target="_blank" rel="noopener noreferrer"><code>download_labelstudio.py</code></a> asks Label Studio for the ids of the tasks that
-have been labelled (optionally limited to a range of task ids), exports them with
-Label Studio's YOLO export type, and unpacks the archive into a timestamped folder.
-Source images can be downloaded as well, but by default they are not, because the
-frames already exist on disk from Stage 1. Next to the export the script writes
-`download_params.yaml`, which records the project name and id, the task-id range and
-the download time.
-
-The export contains a `classes.txt` file with the label names, a `labels/` folder with
-one `.txt` file per frame, and a `notes.json` file with metadata. Each label file has
-one line per bounding box:
-
-```text
-class_id  x_center  y_center  width  height
-```
-
-All five values are normalised between 0 and 1 relative to the image dimensions,
-which makes the format independent of resolution. For example:
-
-```text
-0  0.242  0.668  0.103  0.113
-```
-
-This line is one fish: class 0 (`danio_rerio`), centred about a quarter of the way
-across the frame and two thirds of the way down.
-
-<FigureSrc src="/aquamind/yolo-bbox-explainer.svg" alt="Diagram of one fish in a tank image with its YOLO bounding box. The label line 0 0.242 0.668 0.103 0.113 is broken down into the class (danio_rerio), the x and y centre of the box, and its width and height, each normalised between 0 and 1." caption="YOLO coordinate system: the label line for one fish, broken down. All values are normalised between 0 and 1." />
-
 ### Storing the annotations
 
-<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/store_annotations.py" target="_blank" rel="noopener noreferrer"><code>store_annotations.py</code></a> is where the three kinds of input in the pipeline
+<a href="https://github.com/govinda-lienart/AquaMind/blob/main/scripts/store_annotations.py" target="_blank" rel="noopener noreferrer"><code>store_annotations.py</code></a> (<a href="#" data-lightbox-src="/portfolio/aquamind/stages/02-store-annotations-flow.svg" data-lightbox-alt="Internal flow of store_annotations.py: config.yaml is read and a MySQL connection opened with the .env credentials; the two sidecar files, extraction_params.yaml and download_params.yaml, are read, and a missing one only logs a warning; the video id is looked up in the videos table and one annotation_sets row is inserted, which gives the batch id; then every label .txt file is looped over, its frame number is parsed from the file name and looked up in the frames table (a frame that is not registered is skipped with a warning), and each line is parsed as one box and inserted into annotations with its frame id and the batch id; a single commit at the end saves everything, and the script prints a summary with a SQL cross-check.">flow diagram</a>) is where the three kinds of input in the pipeline
 figure meet: the exported label files, the `frames` table from Stage 1, and the two
-sidecar files. It first reads the sidecars, `extraction_params.yaml` from the frames
-folder and `download_params.yaml` from beside the export, and creates one
-`annotation_sets` row for the batch, which gives it a batch id. It then loops over the
-`.txt` files in `labels/`, one per frame.
+sidecar files. It first reads the sidecars: `extraction_params.yaml`, written by
+Stage 1 when the frames were extracted, and `download_params.yaml`, written earlier
+in this stage by `download_labelstudio.py`. From the two combined, plus the video name in `config.yaml` (used to look up the
+video's id), it creates one `annotation_sets` row for the batch, which gives it a batch id. It then loops over
+the `.txt` files in `labels/`, one per frame.
 
 Label Studio prefixes each exported file with a hash (for example
 `e6d83681-frame_360.txt`), so the script parses the frame number out of the file name
@@ -159,7 +190,7 @@ in different extraction runs of the same video. A frame that is not in the table
 skipped with a warning, so a label can never be stored against a missing frame.
 
 Each line in a label file is one box. The five values are cast (`class_id` to `int`,
-the four coordinates to `float`), a line with any other number of values is skipped
+the four coordinates to `float`), a line with fewer than five values is skipped
 with a warning, and the class id is mapped to its name. Every box is inserted into
 `annotations` with its `frame_id` and the batch id, and a single commit at the end
 saves the whole batch, so a run that fails partway saves nothing. The script finishes

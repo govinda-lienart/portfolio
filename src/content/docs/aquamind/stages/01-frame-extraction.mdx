@@ -54,6 +54,13 @@ video's metadata, as the input for labelling in Stage 2.
 
 ## Methods
 
+### Pipeline overview
+
+Each video is registered once, then sampled into frames that are written both to
+disk and to MySQL, as traced in Fig. 1 below. The subsections that follow take the
+pipeline step by step: first the choice of recording format, then the two tables
+and the scripts that fill them.
+
 <FigureSrc
   src="/aquamind/stages/01-frame-extraction-pipeline.svg"
   alt="Stage 1 video-registration and frame-extraction pipeline. Raw aquarium video, recorded on an iPhone 14 at 1080p and 60 FPS and switched from HEVC to H.264 after a colour-fidelity bug, is first registered by sync_videos.py, which reads video_metadata.xlsx and inserts one row per video into the MySQL videos table. extract_frames.py then cuts the video into still frames, by default one per second (the sample rate is set in config.yaml). Each selected frame produces two outputs: a JPG file on disk, and a corresponding row in the MySQL frames table (frame_number, timestamp, frame_path, video_id foreign key). Both outputs converge into a single frame-indexed dataset that later stages reference by frame number and timestamp instead of re-decoding the source video, feeding forward into Stage 2's LabelStudio annotation step."
